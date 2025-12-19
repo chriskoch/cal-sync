@@ -13,3 +13,13 @@ __pycache__/
 .claude/
 node_modules/
 package-lock.json
+
+# Python test coverage
+.coverage
+coverage.xml
+htmlcov/
+
+# Frontend build artifacts
+dist/
+.vite/
+vite-env.d.ts
