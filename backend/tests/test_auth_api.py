@@ -16,7 +16,7 @@ class TestUserRegistration:
             "/auth/register",
             json={
                 "email": "newuser@example.com",
-                "password": "securepassword123",
+                "password": "SecurePassword123!",
                 "full_name": "New User"
             }
         )
@@ -35,7 +35,7 @@ class TestUserRegistration:
             "/auth/register",
             json={
                 "email": test_user.email,
-                "password": "anotherpassword",
+                "password": "AnotherPassword123!",
                 "full_name": "Another User"
             }
         )
@@ -49,7 +49,7 @@ class TestUserRegistration:
             "/auth/register",
             json={
                 "email": "not-an-email",
-                "password": "securepassword123",
+                "password": "SecurePassword123!",
             }
         )
 
@@ -69,6 +69,106 @@ class TestUserRegistration:
 
 @pytest.mark.integration
 @pytest.mark.auth
+class TestPasswordValidation:
+    """Test password strength validation."""
+
+    def test_password_too_short(self, client):
+        """Test password shorter than 8 characters fails."""
+        response = client.post(
+            "/auth/register",
+            json={
+                "email": "test@example.com",
+                "password": "Abc123!",  # Only 7 characters
+            }
+        )
+
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+        assert "8 characters" in response.json()["detail"][0]["msg"]
+
+    def test_password_no_uppercase(self, client):
+        """Test password without uppercase letter fails."""
+        response = client.post(
+            "/auth/register",
+            json={
+                "email": "test@example.com",
+                "password": "lowercase123!",
+            }
+        )
+
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+        assert "uppercase" in response.json()["detail"][0]["msg"].lower()
+
+    def test_password_no_lowercase(self, client):
+        """Test password without lowercase letter fails."""
+        response = client.post(
+            "/auth/register",
+            json={
+                "email": "test@example.com",
+                "password": "UPPERCASE123!",
+            }
+        )
+
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+        assert "lowercase" in response.json()["detail"][0]["msg"].lower()
+
+    def test_password_no_digit(self, client):
+        """Test password without digit fails."""
+        response = client.post(
+            "/auth/register",
+            json={
+                "email": "test@example.com",
+                "password": "NoDigits!",
+            }
+        )
+
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+        assert "digit" in response.json()["detail"][0]["msg"].lower()
+
+    def test_password_no_special_char(self, client):
+        """Test password without special character fails."""
+        response = client.post(
+            "/auth/register",
+            json={
+                "email": "test@example.com",
+                "password": "NoSpecial123",
+            }
+        )
+
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+        assert "special character" in response.json()["detail"][0]["msg"].lower()
+
+    def test_password_meets_all_requirements(self, client):
+        """Test password that meets all requirements succeeds."""
+        response = client.post(
+            "/auth/register",
+            json={
+                "email": "valid@example.com",
+                "password": "ValidPass123!",
+                "full_name": "Valid User"
+            }
+        )
+
+        assert response.status_code == status.HTTP_201_CREATED
+        assert response.json()["email"] == "valid@example.com"
+
+    def test_password_with_various_special_chars(self, client):
+        """Test passwords with different special characters all work."""
+        special_chars = ['!', '@', '#', '$', '%', '^', '&', '*', '(', ')']
+
+        for char in special_chars:
+            response = client.post(
+                "/auth/register",
+                json={
+                    "email": f"user{char}@example.com",
+                    "password": f"Password123{char}",
+                }
+            )
+
+            assert response.status_code == status.HTTP_201_CREATED
+
+
+@pytest.mark.integration
+@pytest.mark.auth
 class TestUserLogin:
     """Test user login endpoint."""
 
@@ -78,7 +178,7 @@ class TestUserLogin:
             "/auth/token",
             data={
                 "username": test_user.email,
-                "password": "testpassword123"
+                "password": "TestPassword123!"
             },
         )
 
@@ -174,7 +274,7 @@ class TestAuthenticationFlow:
             "/auth/register",
             json={
                 "email": "flowtest@example.com",
-                "password": "testpass123",
+                "password": "TestPass123!",
                 "full_name": "Flow Test User"
             }
         )
@@ -186,7 +286,7 @@ class TestAuthenticationFlow:
             "/auth/token",
             data={
                 "username": "flowtest@example.com",
-                "password": "testpass123"
+                "password": "TestPass123!"
             }
         )
         assert login_response.status_code == status.HTTP_200_OK
