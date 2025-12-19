@@ -2,6 +2,8 @@
 
 One-way synchronization of Google Calendar events between two different Google accounts. Web-based multi-tenant SaaS application with React + Material UI frontend and FastAPI backend.
 
+> **📋 See [CHANGELOG.md](CHANGELOG.md) for detailed version history and release notes**
+
 ## How it works
 
 - Multi-tenant SaaS with user registration and JWT authentication
@@ -69,11 +71,11 @@ JWT_SECRET=$(openssl rand -base64 32)
 ENCRYPTION_KEY=$(openssl rand -base64 32)
 
 # Database (Docker Postgres)
-DATABASE_URL=postgresql://postgres:dev@localhost:5432/calsync
+DATABASE_URL=postgresql://postgres:dev@localhost:5433/calsync
 
 # API URLs
 API_URL=http://localhost:8000
-FRONTEND_URL=http://localhost:3000
+FRONTEND_URL=http://localhost:3033
 ```
 
 ### 3. Start PostgreSQL Database
@@ -82,7 +84,7 @@ FRONTEND_URL=http://localhost:3000
 docker run -d --name cal-sync-db \
   -e POSTGRES_PASSWORD=dev \
   -e POSTGRES_DB=calsync \
-  -p 5432:5432 \
+  -p 5433:5432 \
   postgres:15
 ```
 
@@ -117,23 +119,24 @@ npm install
 npm run dev
 ```
 
-Frontend runs at http://localhost:3000
+Frontend runs at http://localhost:3033
 
 ### 6. Access the Application
 
-1. Open http://localhost:3000
+1. Open http://localhost:3033
 2. Register a new account
 3. Connect Source Google account (OAuth flow)
 4. Connect Destination Google account (OAuth flow)
 5. Select calendars and create sync configuration
-6. Trigger manual sync
+6. Trigger manual sync and view detailed results
+7. View sync history with complete audit trail
 
 ## Usage
 
 ### Web Application
 
 1. **User Registration**
-   - Navigate to http://localhost:3000/register
+   - Navigate to http://localhost:3033/register
    - Create account with email/password
 
 2. **Connect Google Accounts**
@@ -142,15 +145,19 @@ Frontend runs at http://localhost:3000
    - Click "Connect Destination Account" → Google OAuth flow
    - Both accounts now show connected with email addresses
 
-3. **Create Sync Configuration** (Future feature)
-   - Select source calendar from dropdown
+3. **Create Sync Configuration**
+   - Select source calendar from dropdown (shows all accessible calendars)
    - Select destination calendar from dropdown
-   - Set sync window (default: 90 days)
-   - Save configuration
+   - Set sync lookahead window (default: 90 days)
+   - Click "Create Sync Configuration"
+   - Configuration appears in "Active Sync Configurations" section
 
-4. **Trigger Sync**
-   - Click "Sync Now" button on dashboard
-   - View sync logs and statistics
+4. **Manage Syncs**
+   - **Trigger Manual Sync:** Click "Trigger Sync Now" button
+   - **View Results:** See detailed feedback (events created/updated/deleted)
+   - **View History:** Click "View History" to see complete audit trail
+   - **Delete Config:** Remove sync configuration with confirmation
+   - **Refresh:** Update configuration list to see latest sync times
 
 ### API Endpoints
 
@@ -172,6 +179,7 @@ Backend API documentation: http://localhost:8000/docs
 **Sync:**
 - `POST /sync/config` - Create sync configuration
 - `GET /sync/config` - List user's sync configs
+- `DELETE /sync/config/{config_id}` - Delete sync configuration
 - `POST /sync/trigger/{config_id}` - Trigger manual sync
 - `GET /sync/logs/{config_id}` - View sync history
 
@@ -209,6 +217,9 @@ cal-sync/
 │   │   │   ├── Register.tsx
 │   │   │   └── Dashboard.tsx
 │   │   ├── components/
+│   │   │   ├── CalendarSelector.tsx    # Calendar dropdown
+│   │   │   ├── SyncConfigForm.tsx      # Sync config creation
+│   │   │   └── SyncHistoryDialog.tsx   # Sync history viewer
 │   │   ├── context/
 │   │   │   └── AuthContext.tsx
 │   │   ├── services/
@@ -216,7 +227,8 @@ cal-sync/
 │   │   ├── theme/
 │   │   │   └── theme.ts         # Material UI theme
 │   │   ├── App.tsx
-│   │   └── main.tsx
+│   │   ├── main.tsx
+│   │   └── vite-env.d.ts        # TypeScript declarations
 │   ├── package.json
 │   ├── vite.config.ts
 │   └── tsconfig.json
@@ -269,12 +281,13 @@ Enhanced event metadata for future 2-way sync:
 - ✅ Refactored sync engine from CLI
 - ✅ Event mappings table (Story 3)
 - ✅ Docker Compose for local development
-
-### In Progress
-- 🚧 Calendar selection UI
-- 🚧 Sync configuration creation
-- 🚧 Manual sync trigger button
-- 🚧 Sync logs and history display
+- ✅ Calendar selection UI with dropdowns
+- ✅ Sync configuration creation and management
+- ✅ Manual sync trigger with detailed results
+- ✅ Sync history viewer with complete audit trail
+- ✅ Delete sync configurations
+- ✅ Real-time sync status feedback
+- ✅ Error handling and user notifications
 
 ### To Do (Story 1 - Terraform)
 - ⬜ Terraform modules for production deployment
@@ -282,6 +295,14 @@ Enhanced event metadata for future 2-way sync:
 - ⬜ Cloud Run deployment
 - ⬜ Secret Manager integration
 - ⬜ Bootstrap script for OAuth client
+
+### Future Enhancements
+- ⬜ Automatic scheduled syncs (Cloud Scheduler)
+- ⬜ Bidirectional sync (2-way)
+- ⬜ Email notifications for sync failures
+- ⬜ Calendar timezone handling improvements
+- ⬜ Batch sync operations
+- ⬜ Sync configuration templates
 
 ### Legacy CLI (Preserved)
 

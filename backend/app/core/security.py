@@ -2,8 +2,11 @@ from datetime import datetime, timedelta
 from typing import Optional
 from jose import JWTError, jwt
 import bcrypt
+import logging
 from cryptography.fernet import Fernet
 from app.config import settings
+
+logger = logging.getLogger(__name__)
 
 # Fernet cipher for OAuth token encryption
 cipher = Fernet(settings.encryption_key.encode())
@@ -40,10 +43,10 @@ def decode_access_token(token: str) -> Optional[dict]:
         payload = jwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
         return payload
     except JWTError as e:
-        print(f"JWT decode error: {e}")  # Debug logging
+        logger.warning(f"JWT decode error: {e}")
         return None
     except Exception as e:
-        print(f"Unexpected error decoding JWT: {e}")  # Debug logging
+        logger.error(f"Unexpected error decoding JWT: {e}")
         return None
 
 

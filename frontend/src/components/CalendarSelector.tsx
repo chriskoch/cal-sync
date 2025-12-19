@@ -30,21 +30,21 @@ export default function CalendarSelector({
   const [error, setError] = useState('');
 
   useEffect(() => {
+    const fetchCalendars = async () => {
+      try {
+        setLoading(true);
+        const response = await calendarsAPI.listCalendars(accountType);
+        setCalendars(response.data.calendars);
+        setError('');
+      } catch (err: any) {
+        setError(`Failed to fetch ${accountType} calendars`);
+      } finally {
+        setLoading(false);
+      }
+    };
+
     fetchCalendars();
   }, [accountType]);
-
-  const fetchCalendars = async () => {
-    try {
-      setLoading(true);
-      const response = await calendarsAPI.listCalendars(accountType);
-      setCalendars(response.data.calendars);
-      setError('');
-    } catch (err: any) {
-      setError(`Failed to fetch ${accountType} calendars`);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleChange = (event: SelectChangeEvent) => {
     onChange(event.target.value);
