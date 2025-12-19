@@ -147,10 +147,11 @@ def client(db) -> Generator:
 def test_user(db) -> User:
     """
     Create a test user in the database.
+    Password: TestPassword123!
     """
     user = User(
         email="test@example.com",
-        hashed_password=get_password_hash("testpassword123"),
+        hashed_password=get_password_hash("TestPassword123!"),
         full_name="Test User",
         is_active=True
     )

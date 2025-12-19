@@ -94,6 +94,7 @@ export default function Register() {
               autoComplete="new-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              helperText="Must be at least 8 characters with uppercase, lowercase, number, and special character"
             />
             <Button
               type="submit"
