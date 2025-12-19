@@ -21,6 +21,7 @@ class SyncConfig(Base):
     # Sync settings
     is_active = Column(Boolean, default=True, nullable=False)
     sync_lookahead_days = Column(Integer, default=90, nullable=False)
+    destination_color_id = Column(String(50), nullable=True)  # Google Calendar color ID for destination events
 
     # Last sync timestamp
     last_synced_at = Column(DateTime(timezone=True))

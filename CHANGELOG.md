@@ -7,6 +7,58 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2025-12-20
+
+### Added
+- Event color customization for destination calendars
+  - Color picker UI with 11 Google Calendar event colors
+  - Auto-selection of source calendar color when available
+  - Visual color preview with Circle icon and color names
+  - "Same as source" option to preserve original event colors
+  - Display selected color in sync configuration cards on dashboard
+- Frontend containerization
+  - Added frontend/Dockerfile for React application
+  - Integrated frontend service into docker-compose.yml
+  - Hot reload support for local development with volume mounts
+- Comprehensive sync engine testing
+  - test_sync_engine.py with 95% code coverage
+  - Tests for event creation, updates, deletions
+  - Error handling tests for 410/404 HTTP errors
+  - Test coverage for calendar sync edge cases
+- OAuth API testing
+  - test_oauth_api.py with 99% code coverage
+  - Tests for authorization flow, token storage, status checks
+  - Integration tests for OAuth callbacks and error handling
+- Database migration for destination color feature
+  - Added destination_color_id column to sync_configs table
+  - Migration: 5ca5e2b9e0ba_add_destination_color_id_to_sync_configs.py
+
+### Changed
+- Updated CalendarItem API to include color_id and background_color fields
+- Enhanced CalendarSelector to pass full calendar object to onChange callback
+- Updated CLAUDE.md documentation to reflect full-stack architecture
+  - Documented event color system and limitations
+  - Added comprehensive API endpoints documentation
+  - Added development tasks guide for common operations
+  - Explained calendar vs event color distinction (24 vs 11 colors)
+
+### Fixed
+- Event color validation: Handle out-of-range calendar colors (12-24)
+  - Calendar colors (IDs 12-24) now default to Lavender (ID 1)
+  - Only event colors (IDs 1-11) are allowed for destination events
+- 410 (Gone) error handling in sync engine
+  - Gracefully handle deleted events during delete operations
+  - Gracefully handle deleted events during update operations (recreate as new)
+  - All error handling logged to sync_logs table
+- 404 (Not Found) error handling in sync engine
+  - Skip gracefully when events don't exist
+  - Recreate events when update fails due to missing event
+
+### Technical Details
+- **Color System**: Google Calendar has 24 calendar colors (IDs 1-24) but only 11 event colors (IDs 1-11). Since we sync events, we can only use event colors.
+- **Auto-selection Logic**: When source calendar color is valid (1-11), auto-select it. Otherwise, map background_color or default to Lavender.
+- **Database Schema**: Added `destination_color_id` column (String, nullable) to sync_configs table.
+
 ## [0.3.0] - 2025-12-19
 
 ### Added

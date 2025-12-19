@@ -3,6 +3,7 @@ import hashlib
 from typing import Dict, List, Optional
 from sqlalchemy.orm import Session
 from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
 from google.oauth2.credentials import Credentials
 import uuid
 
@@ -38,7 +39,7 @@ def fetch_events(service, calendar_id: str, time_min: str, time_max: str) -> Lis
     return events
 
 
-def build_payload_from_source(src: dict, sync_cluster_id: Optional[str] = None, dest_event_id: Optional[str] = None) -> dict:
+def build_payload_from_source(src: dict, sync_cluster_id: Optional[str] = None, dest_event_id: Optional[str] = None, destination_color_id: Optional[str] = None) -> dict:
     """Build event payload from source event (preserved from sync.py:58-77 + Story 3 enhancements)."""
     extended_props = {
         "source_id": src.get("id"),
@@ -61,7 +62,7 @@ def build_payload_from_source(src: dict, sync_cluster_id: Optional[str] = None, 
         "recurrence": src.get("recurrence"),
         "transparency": src.get("transparency"),
         "visibility": src.get("visibility"),
-        "colorId": src.get("colorId"),
+        "colorId": destination_color_id if destination_color_id else src.get("colorId"),  # Use destination color if specified
         "reminders": {"useDefault": False},  # avoid noisy notifications
         "extendedProperties": {
             "shared": extended_props
@@ -122,9 +123,13 @@ class SyncEngine:
         source_calendar_id: str,
         dest_calendar_id: str,
         lookahead_days: int = 90,
+        destination_color_id: Optional[str] = None,
     ) -> Dict[str, int]:
         """
         Main sync logic (preserved from sync.py:99-165).
+
+        Args:
+            destination_color_id: Optional Google Calendar color ID to apply to all synced events
 
         Returns:
             Dict with keys: created, updated, deleted
@@ -162,8 +167,16 @@ class SyncEngine:
 
             if src.get("status") == "cancelled":
                 if dest_match:
-                    service_dst.events().delete(calendarId=dest_calendar_id, eventId=dest_match["id"]).execute()
-                    deleted += 1
+                    try:
+                        service_dst.events().delete(calendarId=dest_calendar_id, eventId=dest_match["id"]).execute()
+                        deleted += 1
+                    except HttpError as e:
+                        # If event already deleted (404/410), that's fine - count it as deleted
+                        if e.resp.status in [404, 410]:
+                            deleted += 1
+                        else:
+                            # Re-raise other errors
+                            raise
                     # Remove event mapping
                     self.db.query(EventMapping).filter(
                         EventMapping.sync_config_id == sync_config_id,
@@ -180,43 +193,83 @@ class SyncEngine:
             sync_cluster_id = str(mapping.sync_cluster_id) if mapping else str(uuid.uuid4())
             dest_event_id = dest_match["id"] if dest_match else None
 
-            payload = build_payload_from_source(src, sync_cluster_id, dest_event_id)
+            payload = build_payload_from_source(src, sync_cluster_id, dest_event_id, destination_color_id)
 
             if dest_match:
                 if events_differ(payload, dest_match):
-                    result = service_dst.events().update(
+                    try:
+                        result = service_dst.events().update(
+                            calendarId=dest_calendar_id,
+                            eventId=dest_match["id"],
+                            body=payload,
+                            sendUpdates="none",
+                        ).execute()
+                        updated += 1
+
+                        # Update event mapping
+                        if mapping:
+                            mapping.content_hash = compute_content_hash(src)
+                            mapping.last_synced_at = datetime.datetime.now(datetime.timezone.utc)
+                            mapping.dest_last_modified = datetime.datetime.fromisoformat(result["updated"].replace("Z", "+00:00"))
+                    except HttpError as e:
+                        # Handle 410 (Gone) or 404 (Not Found) - event was deleted on Google's side
+                        if e.resp.status in [404, 410]:
+                            # Remove the mapping since the destination event no longer exists
+                            if mapping:
+                                self.db.delete(mapping)
+                            # Recreate the event
+                            try:
+                                result = service_dst.events().insert(
+                                    calendarId=dest_calendar_id,
+                                    body=payload,
+                                    sendUpdates="none",
+                                ).execute()
+                                created += 1
+
+                                # Create new event mapping
+                                new_mapping = EventMapping(
+                                    sync_config_id=sync_config_id,
+                                    source_event_id=src_id,
+                                    dest_event_id=result["id"],
+                                    sync_cluster_id=uuid.UUID(sync_cluster_id),
+                                    content_hash=compute_content_hash(src),
+                                    last_synced_at=datetime.datetime.now(datetime.timezone.utc),
+                                    source_last_modified=datetime.datetime.fromisoformat(src["updated"].replace("Z", "+00:00")) if src.get("updated") else None,
+                                    dest_last_modified=datetime.datetime.fromisoformat(result["updated"].replace("Z", "+00:00"))
+                                )
+                                self.db.add(new_mapping)
+                            except HttpError:
+                                # If recreate also fails, skip this event
+                                pass
+                        else:
+                            # Re-raise other HTTP errors
+                            raise
+            else:
+                try:
+                    result = service_dst.events().insert(
                         calendarId=dest_calendar_id,
-                        eventId=dest_match["id"],
                         body=payload,
                         sendUpdates="none",
                     ).execute()
-                    updated += 1
+                    created += 1
 
-                    # Update event mapping
-                    if mapping:
-                        mapping.content_hash = compute_content_hash(src)
-                        mapping.last_synced_at = datetime.datetime.now(datetime.timezone.utc)
-                        mapping.dest_last_modified = datetime.datetime.fromisoformat(result["updated"].replace("Z", "+00:00"))
-            else:
-                result = service_dst.events().insert(
-                    calendarId=dest_calendar_id,
-                    body=payload,
-                    sendUpdates="none",
-                ).execute()
-                created += 1
-
-                # Create event mapping
-                new_mapping = EventMapping(
-                    sync_config_id=sync_config_id,
-                    source_event_id=src_id,
-                    dest_event_id=result["id"],
-                    sync_cluster_id=uuid.UUID(sync_cluster_id),
-                    content_hash=compute_content_hash(src),
-                    last_synced_at=datetime.datetime.now(datetime.timezone.utc),
-                    source_last_modified=datetime.datetime.fromisoformat(src["updated"].replace("Z", "+00:00")) if src.get("updated") else None,
-                    dest_last_modified=datetime.datetime.fromisoformat(result["updated"].replace("Z", "+00:00"))
-                )
-                self.db.add(new_mapping)
+                    # Create event mapping
+                    new_mapping = EventMapping(
+                        sync_config_id=sync_config_id,
+                        source_event_id=src_id,
+                        dest_event_id=result["id"],
+                        sync_cluster_id=uuid.UUID(sync_cluster_id),
+                        content_hash=compute_content_hash(src),
+                        last_synced_at=datetime.datetime.now(datetime.timezone.utc),
+                        source_last_modified=datetime.datetime.fromisoformat(src["updated"].replace("Z", "+00:00")) if src.get("updated") else None,
+                        dest_last_modified=datetime.datetime.fromisoformat(result["updated"].replace("Z", "+00:00"))
+                    )
+                    self.db.add(new_mapping)
+                except HttpError as e:
+                    # Log and skip events that fail to insert
+                    if e.resp.status not in [404, 410]:
+                        # Re-raise non-404/410 errors
+                        raise
 
         self.db.commit()
 

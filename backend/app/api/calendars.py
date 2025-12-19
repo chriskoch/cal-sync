@@ -19,6 +19,8 @@ class CalendarItem(BaseModel):
     time_zone: str = ""
     access_role: str = ""
     is_primary: bool = False
+    background_color: str = ""
+    color_id: str = ""
 
 
 class CalendarListResponse(BaseModel):
@@ -61,6 +63,8 @@ def list_calendars(
                 time_zone=item.get("timeZone", ""),
                 access_role=item.get("accessRole", ""),
                 is_primary=item.get("primary", False),
+                background_color=item.get("backgroundColor", ""),
+                color_id=item.get("colorId", ""),
             )
             for item in calendar_items
         ]

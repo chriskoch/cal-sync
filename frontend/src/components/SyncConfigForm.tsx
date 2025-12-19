@@ -8,8 +8,12 @@ import {
   Alert,
   Grid,
   Divider,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
 } from '@mui/material';
-import { PlayArrow } from '@mui/icons-material';
+import { PlayArrow, Circle } from '@mui/icons-material';
 import CalendarSelector from './CalendarSelector';
 import { syncAPI, SyncConfig } from '../services/api';
 
@@ -17,10 +21,26 @@ interface SyncConfigFormProps {
   onConfigCreated?: (config: SyncConfig) => void;
 }
 
+// Google Calendar color IDs and their corresponding colors
+const CALENDAR_COLORS = [
+  { id: '1', name: 'Lavender', color: '#7986cb' },
+  { id: '2', name: 'Sage', color: '#33b679' },
+  { id: '3', name: 'Grape', color: '#8e24aa' },
+  { id: '4', name: 'Flamingo', color: '#e67c73' },
+  { id: '5', name: 'Banana', color: '#f6c026' },
+  { id: '6', name: 'Tangerine', color: '#f5511d' },
+  { id: '7', name: 'Peacock', color: '#039be5' },
+  { id: '8', name: 'Graphite', color: '#616161' },
+  { id: '9', name: 'Blueberry', color: '#3f51b5' },
+  { id: '10', name: 'Basil', color: '#0b8043' },
+  { id: '11', name: 'Tomato', color: '#d60000' },
+];
+
 export default function SyncConfigForm({ onConfigCreated }: SyncConfigFormProps) {
   const [sourceCalendarId, setSourceCalendarId] = useState('');
   const [destCalendarId, setDestCalendarId] = useState('');
   const [syncLookaheadDays, setSyncLookaheadDays] = useState(90);
+  const [destinationColorId, setDestinationColorId] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -46,7 +66,8 @@ export default function SyncConfigForm({ onConfigCreated }: SyncConfigFormProps)
       const response = await syncAPI.createConfig(
         sourceCalendarId,
         destCalendarId,
-        syncLookaheadDays
+        syncLookaheadDays,
+        destinationColorId || undefined
       );
 
       setSuccess('Sync configuration created successfully!');
@@ -88,7 +109,36 @@ export default function SyncConfigForm({ onConfigCreated }: SyncConfigFormProps)
             <CalendarSelector
               accountType="source"
               value={sourceCalendarId}
-              onChange={setSourceCalendarId}
+              onChange={(id, calendar) => {
+                setSourceCalendarId(id);
+
+                // Auto-select source calendar's color for destination
+                if (calendar?.color_id && calendar.color_id.trim() !== '') {
+                  // Check if the color_id is in our supported range (1-11)
+                  // Event colors in Google Calendar only support IDs 1-11
+                  const isValidColorId = CALENDAR_COLORS.some(c => c.id === calendar.color_id);
+                  if (isValidColorId) {
+                    setDestinationColorId(calendar.color_id);
+                  } else {
+                    // Color ID out of range for events, default to Lavender (1)
+                    setDestinationColorId(CALENDAR_COLORS[0].id);
+                  }
+                } else if (calendar?.background_color) {
+                  // Try to map background_color to a color ID
+                  const matchedColor = CALENDAR_COLORS.find(
+                    c => c.color.toLowerCase() === calendar.background_color?.toLowerCase()
+                  );
+                  if (matchedColor) {
+                    setDestinationColorId(matchedColor.id);
+                  } else {
+                    // Default to first color if no match
+                    setDestinationColorId(CALENDAR_COLORS[0].id);
+                  }
+                } else {
+                  // No color information, use "Same as source"
+                  setDestinationColorId('');
+                }
+              }}
               label="Source Calendar (sync FROM)"
             />
           </Grid>
@@ -97,9 +147,32 @@ export default function SyncConfigForm({ onConfigCreated }: SyncConfigFormProps)
             <CalendarSelector
               accountType="destination"
               value={destCalendarId}
-              onChange={setDestCalendarId}
+              onChange={(id) => setDestCalendarId(id)}
               label="Destination Calendar (sync TO)"
             />
+          </Grid>
+
+          <Grid item xs={12} md={6}>
+            <FormControl fullWidth>
+              <InputLabel>Destination Event Color</InputLabel>
+              <Select
+                value={destinationColorId}
+                onChange={(e) => setDestinationColorId(e.target.value)}
+                label="Destination Event Color"
+              >
+                <MenuItem value="">
+                  <em>Same as source</em>
+                </MenuItem>
+                {CALENDAR_COLORS.map((colorOption) => (
+                  <MenuItem key={colorOption.id} value={colorOption.id}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Circle sx={{ color: colorOption.color, fontSize: 16 }} />
+                      {colorOption.name}
+                    </Box>
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
           </Grid>
 
           <Grid item xs={12}>

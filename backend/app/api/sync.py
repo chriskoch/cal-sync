@@ -22,6 +22,7 @@ class CreateSyncConfigRequest(BaseModel):
     source_calendar_id: str
     dest_calendar_id: str
     sync_lookahead_days: int = 90
+    destination_color_id: Optional[str] = None
 
 
 class SyncConfigResponse(BaseModel):
@@ -30,6 +31,7 @@ class SyncConfigResponse(BaseModel):
     dest_calendar_id: str
     is_active: bool
     sync_lookahead_days: int
+    destination_color_id: Optional[str] = None
     last_synced_at: Optional[datetime] = None
 
     @field_serializer('id')
@@ -77,6 +79,7 @@ def create_sync_config(
         source_calendar_id=config_data.source_calendar_id,
         dest_calendar_id=config_data.dest_calendar_id,
         sync_lookahead_days=config_data.sync_lookahead_days,
+        destination_color_id=config_data.destination_color_id,
     )
     db.add(new_config)
     db.commit()
@@ -152,6 +155,7 @@ def trigger_sync(
         source_calendar_id=sync_config.source_calendar_id,
         dest_calendar_id=sync_config.dest_calendar_id,
         lookahead_days=sync_config.sync_lookahead_days,
+        destination_color_id=sync_config.destination_color_id,
     )
 
     return {
@@ -222,6 +226,7 @@ def run_sync_task(
     source_calendar_id: str,
     dest_calendar_id: str,
     lookahead_days: int,
+    destination_color_id: Optional[str] = None,
 ):
     """Background task to run the sync operation."""
     from app.database import SessionLocal
@@ -238,6 +243,7 @@ def run_sync_task(
             source_calendar_id=source_calendar_id,
             dest_calendar_id=dest_calendar_id,
             lookahead_days=lookahead_days,
+            destination_color_id=destination_color_id,
         )
 
         # Update sync log

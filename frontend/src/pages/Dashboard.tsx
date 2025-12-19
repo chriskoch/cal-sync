@@ -15,11 +15,26 @@ import {
   Chip,
   Divider,
 } from '@mui/material';
-import { CheckCircle, Cancel, ExitToApp, PlayArrow, Refresh, Delete, History } from '@mui/icons-material';
+import { CheckCircle, Cancel, ExitToApp, PlayArrow, Refresh, Delete, History, Circle } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
 import { oauthAPI, OAuthStatus, SyncConfig, syncAPI } from '../services/api';
 import SyncConfigForm from '../components/SyncConfigForm';
 import SyncHistoryDialog from '../components/SyncHistoryDialog';
+
+// Google Calendar color IDs and their corresponding colors
+const CALENDAR_COLORS: { [key: string]: { name: string; color: string } } = {
+  '1': { name: 'Lavender', color: '#7986cb' },
+  '2': { name: 'Sage', color: '#33b679' },
+  '3': { name: 'Grape', color: '#8e24aa' },
+  '4': { name: 'Flamingo', color: '#e67c73' },
+  '5': { name: 'Banana', color: '#f6c026' },
+  '6': { name: 'Tangerine', color: '#f5511d' },
+  '7': { name: 'Peacock', color: '#039be5' },
+  '8': { name: 'Graphite', color: '#616161' },
+  '9': { name: 'Blueberry', color: '#3f51b5' },
+  '10': { name: 'Basil', color: '#0b8043' },
+  '11': { name: 'Tomato', color: '#d60000' },
+};
 
 export default function Dashboard() {
   const { user, logout } = useAuth();
@@ -282,6 +297,17 @@ export default function Dashboard() {
                                 <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
                                   Sync Lookahead: <strong>{config.sync_lookahead_days} days</strong>
                                 </Typography>
+                                {config.destination_color_id && CALENDAR_COLORS[config.destination_color_id] && (
+                                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 1 }}>
+                                    <Typography variant="body2" color="text.secondary">
+                                      Destination Color:
+                                    </Typography>
+                                    <Circle sx={{ color: CALENDAR_COLORS[config.destination_color_id].color, fontSize: 16 }} />
+                                    <Typography variant="body2" color="text.secondary">
+                                      <strong>{CALENDAR_COLORS[config.destination_color_id].name}</strong>
+                                    </Typography>
+                                  </Box>
+                                )}
                                 {config.last_synced_at && (
                                   <Typography variant="body2" color="text.secondary">
                                     Last Synced: <strong>{new Date(config.last_synced_at).toLocaleString()}</strong>

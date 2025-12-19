@@ -4,58 +4,81 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Python script that synchronizes Google Calendar events from christian@livelyapps.com to a specific calendar (4bd46f6a...@group.calendar.google.com) owned by koch.chris@gmail.com using dual OAuth flows. Infrastructure provisioned via Terraform.
+Full-stack web application that synchronizes Google Calendar events between multiple calendar accounts. Users can configure multiple sync pairs, each syncing events from a source calendar to a destination calendar with customizable color schemes.
+
+**Stack:**
+- **Backend**: FastAPI (Python) with PostgreSQL database
+- **Frontend**: React + TypeScript + Material-UI
+- **Infrastructure**: Docker Compose for local development
+- **Authentication**: Dual OAuth 2.0 flows for source and destination Google accounts
 
 ## Development Commands
 
 ```bash
-# Setup
-terraform init && terraform apply
-terraform output -raw client_secret > creds/source/credentials.json
-terraform output -raw client_secret > creds/dest/credentials.json
-pip install -r requirements.txt
-python auth.py
+# Start all services (PostgreSQL, backend, frontend)
+docker compose up
 
-# Sync
-python sync.py
+# Run backend tests
+docker compose exec backend pytest
 
-# Test
-pytest test_sync.py -v
+# Run database migrations
+docker compose exec backend alembic upgrade head
 
-# Re-authenticate
-python auth.py
+# Create new migration
+docker compose exec backend alembic revision --autogenerate -m "description"
+
+# Stop all services
+docker compose down
 ```
 
 ## Architecture
 
+### Web Application Structure
+
+```
+├── backend/
+│   ├── app/
+│   │   ├── api/           # API endpoints (auth, oauth, calendars, sync)
+│   │   ├── core/          # Business logic (sync_engine)
+│   │   ├── models/        # SQLAlchemy models
+│   │   ├── migrations/    # Alembic database migrations
+│   │   └── database.py    # Database configuration
+│   ├── tests/             # Backend tests
+│   └── Dockerfile         # Backend container
+├── frontend/
+│   ├── src/
+│   │   ├── components/    # React components
+│   │   ├── pages/         # Page components (Dashboard, Login, Register)
+│   │   ├── services/      # API client
+│   │   └── context/       # React context (AuthContext)
+│   └── Dockerfile         # Frontend container
+└── docker-compose.yml     # Multi-container orchestration
+```
+
 ### Dual OAuth Flow
 
-**Key Innovation:** Single OAuth client ID used for two separate authentications.
+**Key Innovation:** Single OAuth client ID used for two separate authentications per user.
 
 ```
-main.tf provisions:
-├── OAuth consent screen (external, calendar scope)
-├── OAuth client ID (Desktop app: calendar-sync-client)
-└── Google Calendar API enabled
-
-OAuth client exported twice:
-├── creds/source/credentials.json  (same client)
-└── creds/dest/credentials.json    (same client)
-
-Authentication (auth.py):
-├── Flow 1: christian@livelyapps.com → creds/source/token.json
-└── Flow 2: koch.chris@gmail.com → creds/dest/token.json
-
-Sync (sync.py):
-├── service_src = build(creds_src)  # Reads source calendar
-└── service_dst = build(creds_dst)  # Writes dest calendar
+User Authentication Flow:
+1. User registers/logs in to the web app (username/password)
+2. User connects source Google account (OAuth flow #1)
+   → Stores OAuth tokens in database (oauth_tokens table)
+3. User connects destination Google account (OAuth flow #2)
+   → Stores separate OAuth tokens in database
+4. User creates sync configurations linking source → destination calendars
 ```
 
-**Why same credentials.json?** The OAuth client defines the "application" requesting access. When users authenticate, they grant the application access to THEIR calendar. Same app, different users, different tokens.
+**Database Schema:**
+- `users`: User accounts (username, hashed password)
+- `oauth_tokens`: OAuth tokens per user per account_type (source/destination)
+- `sync_configs`: Calendar sync configurations (source_calendar_id, dest_calendar_id, settings)
+- `sync_logs`: Sync execution history (events created/updated/deleted, status, errors)
+- `event_mappings`: Links source events to destination events via source_id
 
-### Idempotent Sync Mechanism
+### Idempotent Sync Engine
 
-Located in [sync.py:68-87](sync.py#L68-L87) and [sync.py:131-160](sync.py#L131-L160).
+Located in [backend/app/core/sync_engine.py](backend/app/core/sync_engine.py).
 
 **Core Pattern:**
 1. Fetch all source and destination events for time window
@@ -76,11 +99,41 @@ Located in [sync.py:68-87](sync.py#L68-L87) and [sync.py:131-160](sync.py#L131-L
 }
 ```
 
-This allows unlimited re-runs without duplicates. The `source_id` is the foreign key linking destination events back to their source.
+**Error Handling:**
+- 410 (Gone) errors: Event already deleted, skip gracefully
+- 404 (Not Found) errors: Event doesn't exist, skip or recreate
+- All errors logged to sync_logs table
+
+### Event Color Customization
+
+**Google Calendar Color System:**
+- **Calendar colors**: 24 colors (IDs 1-24) - for calendar backgrounds
+- **Event colors**: 11 colors (IDs 1-11) - for individual events
+
+**Implementation:**
+- Users can select destination event color from 11 valid event colors
+- Source calendar color is auto-selected if valid (IDs 1-11)
+- Out-of-range calendar colors (12-24) default to Lavender (ID 1)
+- "Same as source" option preserves source event's original color
+
+**Color Palette:**
+```typescript
+1: Lavender (#7986cb)
+2: Sage (#33b679)
+3: Grape (#8e24aa)
+4: Flamingo (#e67c73)
+5: Banana (#f6c026)
+6: Tangerine (#f5511d)
+7: Peacock (#039be5)
+8: Graphite (#616161)
+9: Blueberry (#3f51b5)
+10: Basil (#0b8043)
+11: Tomato (#d60000)
+```
 
 ### Event Comparison
 
-[sync.py:90-106](sync.py#L90-L106) defines comparable fields:
+[sync_engine.py](backend/app/core/sync_engine.py) defines comparable fields:
 - summary, description, location
 - start, end, recurrence
 - transparency, visibility, colorId
@@ -90,110 +143,152 @@ Only these fields trigger updates. Metadata (etag, updated, id) is ignored.
 
 ### Time Window Behavior
 
-[sync.py:109-111](sync.py#L109-L111) sets sync window:
+Default sync window: **now → 90 days** (configurable per sync config).
+Past events are never synced or modified.
+
+## API Endpoints
+
+### Authentication
+- `POST /auth/register` - Create new user account
+- `POST /auth/login` - Login with username/password, returns JWT
+- `GET /auth/me` - Get current user info
+
+### OAuth
+- `POST /oauth/start/{account_type}` - Initiate OAuth flow (source/destination)
+- `GET /oauth/callback/{account_type}` - OAuth callback handler
+- `GET /oauth/status` - Check OAuth connection status
+
+### Calendars
+- `GET /calendars/{account_type}/list` - List available calendars (includes color_id)
+
+### Sync Configuration
+- `POST /sync/config` - Create sync configuration
+- `GET /sync/config` - List user's sync configurations
+- `DELETE /sync/config/{config_id}` - Delete sync configuration
+- `POST /sync/trigger/{config_id}` - Manually trigger sync
+- `GET /sync/logs/{config_id}` - Get sync history
+
+## Database Models
+
+### SyncConfig
 ```python
-now = datetime.datetime.now(datetime.timezone.utc)
-time_min = iso_utc(now)
-time_max = iso_utc(now + timedelta(days=SYNC_LOOKAHEAD_DAYS))
+- source_calendar_id: str
+- dest_calendar_id: str
+- sync_lookahead_days: int (default: 90)
+- destination_color_id: str | None  # Event color ID (1-11)
+- is_active: bool
+- last_synced_at: datetime | None
 ```
 
-Default: now → 90 days. Past events never synced or modified.
-
-### Credential Loading
-
-[sync.py:14-28](sync.py#L14-L28) loads credentials from directories:
-- Checks for `token.json` existence
-- Auto-refreshes expired tokens with refresh_token
-- Fails with helpful message if token missing/invalid
-- No OAuth flow in sync.py (moved to auth.py)
-
-## File Structure
-
-**Infrastructure:**
-- [main.tf](main.tf) - Single-file Terraform (OAuth client, consent screen, Calendar API)
-
-**Python Scripts:**
-- [auth.py](auth.py) - Interactive dual OAuth authentication (run once, or when tokens expire)
-- [sync.py](sync.py) - Main sync logic with dual service architecture (~165 lines)
-- [test_sync.py](test_sync.py) - Unit tests with mocked API calls
-
-**Configuration:**
-- [.env](.env) - Calendar IDs and sync window (not in repo, see [.gitignore](.gitignore))
-- [requirements.txt](requirements.txt) - Python dependencies including pytest
-
-**Credentials (gitignored):**
-- `creds/source/` - OAuth client + token for christian@livelyapps.com (accesses source calendar)
-- `creds/dest/` - Same OAuth client + separate token for koch.chris@gmail.com (accesses destination group calendar)
-
-## Terraform Infrastructure
-
-[main.tf](main.tf) provisions GCP resources:
-
-```hcl
-google_project_service.calendar_api       # Enables calendar-json.googleapis.com
-google_iap_brand.project_brand            # OAuth consent screen
-google_iap_client.calendar_sync_client    # OAuth client ID (Desktop app)
-output.client_secret                      # JSON for credentials.json
+### SyncLog
+```python
+- sync_config_id: UUID
+- events_created: int
+- events_updated: int
+- events_deleted: int
+- status: str (running|success|failed)
+- error_message: str | None
+- sync_window_start: datetime
+- sync_window_end: datetime
+- started_at: datetime
+- completed_at: datetime | None
 ```
 
-**Output format:** Complete OAuth client JSON compatible with `google-auth-oauthlib`:
-```json
-{
-  "installed": {
-    "client_id": "...",
-    "client_secret": "...",
-    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-    "token_uri": "https://oauth2.googleapis.com/token",
-    ...
-  }
-}
-```
+## Frontend Components
+
+### Key Components
+- **Dashboard**: Main page showing OAuth status and sync configurations
+- **SyncConfigForm**: Create sync configuration with calendar selection and color picker
+- **CalendarSelector**: Dropdown to select source/destination calendars
+- **SyncHistoryDialog**: Modal showing sync execution history
+
+### State Management
+- React Context for authentication (AuthContext)
+- Component-level state for sync configurations and UI state
 
 ## Testing
 
-[test_sync.py](test_sync.py) uses pytest with mocked Google Calendar API:
+### Backend Tests
+```bash
+docker compose exec backend pytest -v
+```
+
+**Test Coverage:**
+- sync_engine.py: 95% coverage
+- API endpoints: 99% coverage (auth, oauth, sync)
+- Error handling: 410/404 errors, authentication failures
 
 **Test Categories:**
-1. `TestBuildPayloadFromSource` - Event transformation logic
-2. `TestEventsDiffer` - Change detection
-3. `TestLoadCredentialsFromDir` - Credential loading, refresh, errors
-4. `TestFetchEventsPagination` - API pagination handling
-5. `TestSyncScenarios` - End-to-end sync with mocked services
+1. Sync engine: Event creation, updates, deletions, error handling
+2. OAuth API: Authorization flow, token storage, status checks
+3. Sync API: Configuration CRUD, manual triggers, history
+4. Auth API: Registration, login, token validation
 
-**No real API calls.** All Google Calendar API interactions use `unittest.mock.Mock`.
+### Frontend
+- React components with TypeScript type checking
+- Material-UI for consistent UI/UX
 
-Run: `pytest test_sync.py -v`
+## Key Features
 
-## Key Constraints
-
-- **One-way sync only:** Changes in destination are overwritten
-- **No attendees/attachments:** Only basic event fields copied
-- **Future events only:** Historical events ignored
-- **No conflict resolution:** Destination always matches source
-- **Sequential OAuth flows:** auth.py prompts between authentications
-- **Manual execution:** No built-in scheduling (use cron/systemd externally)
+- **Multi-user support**: Each user has separate OAuth tokens and sync configurations
+- **Multiple sync pairs**: Users can configure multiple source → destination pairs
+- **Custom colors**: Choose event colors for destination calendar
+- **Manual sync triggers**: Trigger syncs on-demand via UI
+- **Sync history**: View past sync executions with detailed statistics
+- **Error resilience**: Gracefully handles deleted events and API errors
+- **Idempotent syncs**: Unlimited re-runs without duplicates
+- **Containerized**: Docker Compose for easy local development
 
 ## Common Development Tasks
 
-**Add new syncable field:**
-1. Add to `build_payload_from_source()` [sync.py:68-87](sync.py#L68-L87)
-2. Add to `comparable_keys` in `events_differ()` [sync.py:91-102](sync.py#L91-L102)
-3. Add test in [test_sync.py](test_sync.py)
+### Add new syncable event field
+1. Update `build_payload_from_source()` in [sync_engine.py](backend/app/core/sync_engine.py)
+2. Add to `comparable_keys` in `events_differ()` in same file
+3. Add test in [backend/tests/test_sync_engine.py](backend/tests/test_sync_engine.py)
 
-**Change OAuth scopes:**
-1. Update `SCOPES` in [auth.py](auth.py) and [sync.py](sync.py)
-2. Update Terraform consent screen scopes in [main.tf](main.tf)
-3. Re-run `terraform apply` and `python auth.py`
+### Add new API endpoint
+1. Create router function in appropriate file under [backend/app/api/](backend/app/api/)
+2. Add request/response Pydantic models
+3. Add authentication dependency if needed: `current_user: User = Depends(get_current_user)`
+4. Add tests in [backend/tests/](backend/tests/)
 
-**Debug sync issues:**
-1. Check token validity: `python auth.py`
-2. Verify calendar IDs in [.env](.env)
-3. Check extended properties on destination events for `source_id`
-4. Run sync with print statements to see event comparison logic
+### Add new database column
+1. Modify SQLAlchemy model in [backend/app/models/](backend/app/models/)
+2. Generate migration: `docker compose exec backend alembic revision --autogenerate -m "description"`
+3. Review and edit migration in [backend/app/migrations/versions/](backend/app/migrations/versions/)
+4. Apply migration: `docker compose exec backend alembic upgrade head`
+5. Update Pydantic models in [backend/app/api/](backend/app/api/) if needed
+6. Update frontend TypeScript interfaces in [frontend/src/services/api.ts](frontend/src/services/api.ts)
 
-## Why Dual OAuth (Not Calendar Sharing)?
+### Debug sync issues
+1. Check sync logs in UI (Dashboard → View History)
+2. Check database: `docker compose exec db psql -U postgres -d cal_sync`
+3. Check backend logs: `docker compose logs backend`
+4. Verify OAuth tokens are valid via `/oauth/status` endpoint
+5. Check event extended properties for `source_id`
 
-User confirmed calendars must stay isolated. Cannot use calendar sharing because:
-- Source (christian@livelyapps.com) doesn't share calendar with destination
-- Destination (koch.chris@gmail.com) doesn't have write access to source
-- Separate OAuth flows allow reading from one account, writing to another
+## Architecture Decisions
+
+### Why Dual OAuth (Not Calendar Sharing)?
+- **Privacy**: Source and destination accounts remain completely isolated
+- **Flexibility**: Users can sync between any two Google accounts they control
+- **Granular control**: OAuth scopes limit access to calendar data only
+
+### Why Web Application (Not CLI Script)?
+- **Multi-user**: Support multiple users with separate configurations
+- **User-friendly**: No command-line knowledge required
+- **Persistent storage**: Database stores configurations, tokens, and history
+- **Remote access**: Access from any device via web browser
+
+### Why Event Colors (Not Calendar Colors)?
+- Event colors (IDs 1-11) are the only colors that can be set on individual events
+- Calendar colors (IDs 1-24) only affect calendar background, not events
+- Synced events need individual colors, so we must use event colors
+
+## Security Considerations
+
+- **Password hashing**: bcrypt with salt
+- **JWT tokens**: Short-lived access tokens for API authentication
+- **OAuth tokens**: Stored encrypted in database, refreshed automatically
+- **HTTPS required**: Production deployment must use HTTPS
+- **CORS configured**: Frontend-backend communication restricted
