@@ -1,8 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from sqlalchemy.orm import Session
-from pydantic import BaseModel
-from typing import List
+from pydantic import BaseModel, field_serializer
+from typing import List, Optional
 from datetime import datetime
+from uuid import UUID
 import uuid
 
 from app.database import get_db
@@ -24,12 +25,16 @@ class CreateSyncConfigRequest(BaseModel):
 
 
 class SyncConfigResponse(BaseModel):
-    id: str
+    id: UUID
     source_calendar_id: str
     dest_calendar_id: str
     is_active: bool
     sync_lookahead_days: int
-    last_synced_at: datetime = None
+    last_synced_at: Optional[datetime] = None
+
+    @field_serializer('id')
+    def serialize_id(self, id: UUID) -> str:
+        return str(id)
 
     class Config:
         from_attributes = True
@@ -41,16 +46,20 @@ class SyncTriggerResponse(BaseModel):
 
 
 class SyncLogResponse(BaseModel):
-    id: str
+    id: UUID
     events_created: int
     events_updated: int
     events_deleted: int
     status: str
-    error_message: str = None
+    error_message: Optional[str] = None
     sync_window_start: datetime
     sync_window_end: datetime
     started_at: datetime
-    completed_at: datetime = None
+    completed_at: Optional[datetime] = None
+
+    @field_serializer('id')
+    def serialize_id(self, id: UUID) -> str:
+        return str(id)
 
     class Config:
         from_attributes = True
@@ -149,6 +158,33 @@ def trigger_sync(
         "message": "Sync started",
         "sync_log_id": str(sync_log.id),
     }
+
+
+@router.delete("/config/{config_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_sync_config(
+    config_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Delete a sync configuration."""
+    # Get sync config
+    sync_config = db.query(SyncConfig).filter(
+        SyncConfig.id == config_id,
+        SyncConfig.user_id == current_user.id,
+    ).first()
+
+    if not sync_config:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Sync configuration not found",
+        )
+
+    # Delete sync logs first (foreign key constraint)
+    db.query(SyncLog).filter(SyncLog.sync_config_id == config_id).delete()
+
+    # Delete sync config
+    db.delete(sync_config)
+    db.commit()
 
 
 @router.get("/logs/{config_id}", response_model=List[SyncLogResponse])
