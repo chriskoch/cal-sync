@@ -1,4 +1,5 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import field_validator
 from typing import Optional
 
 
@@ -37,7 +38,23 @@ class Settings(BaseSettings):
 
     # Environment
     environment: str = "development"
-    debug: bool = True
+    debug: bool = False  # Default to False for security
+
+    @field_validator('debug', mode='before')
+    @classmethod
+    def validate_debug_mode(cls, v, info):
+        """
+        Validate debug mode setting.
+        Always False in production, regardless of config.
+        Can be True only in development/testing environments.
+        """
+        # If environment is production, force debug to False
+        environment = info.data.get('environment', 'development')
+        if environment == 'production' and v is True:
+            # Log warning but don't raise - just force False
+            print("WARNING: Debug mode cannot be enabled in production. Forcing debug=False")
+            return False
+        return v
 
 
 settings = Settings()
