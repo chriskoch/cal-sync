@@ -43,6 +43,33 @@ For production, use a secrets manager:
 
 Never use `.env` files in production.
 
+### Debug Mode
+
+**CRITICAL: Always disable debug mode in production**
+
+Debug mode (`DEBUG=true`) exposes sensitive information:
+- Detailed error stack traces
+- SQL queries with data
+- Internal file paths
+- Dependency versions
+
+Production deployment checklist:
+1. Set `ENVIRONMENT=production` in environment variables
+2. Set `DEBUG=false` (or omit - defaults to False)
+3. The application will enforce `DEBUG=false` in production automatically
+4. Never override this in production
+
+Development vs Production:
+```bash
+# Development (local only)
+ENVIRONMENT=development
+DEBUG=true
+
+# Production (REQUIRED)
+ENVIRONMENT=production
+DEBUG=false  # or omit this line
+```
+
 ## Password Requirements
 
 Users must create passwords with:
