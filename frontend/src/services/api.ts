@@ -110,6 +110,8 @@ export const syncAPI = {
 
   listConfigs: () => api.get<SyncConfig[]>('/sync/config'),
 
+  deleteConfig: (configId: string) => api.delete(`/sync/config/${configId}`),
+
   triggerSync: (configId: string) =>
     api.post<{ message: string; sync_log_id: string }>(`/sync/trigger/${configId}`),
 
