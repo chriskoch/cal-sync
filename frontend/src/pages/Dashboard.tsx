@@ -15,10 +15,11 @@ import {
   Chip,
   Divider,
 } from '@mui/material';
-import { CheckCircle, Cancel, ExitToApp, PlayArrow, Refresh, Delete } from '@mui/icons-material';
+import { CheckCircle, Cancel, ExitToApp, PlayArrow, Refresh, Delete, History } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
 import { oauthAPI, OAuthStatus, SyncConfig, syncAPI } from '../services/api';
 import SyncConfigForm from '../components/SyncConfigForm';
+import SyncHistoryDialog from '../components/SyncHistoryDialog';
 
 export default function Dashboard() {
   const { user, logout } = useAuth();
@@ -28,6 +29,8 @@ export default function Dashboard() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [syncingConfigId, setSyncingConfigId] = useState<string | null>(null);
+  const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
+  const [selectedConfigId, setSelectedConfigId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchOAuthStatus();
@@ -59,7 +62,7 @@ export default function Dashboard() {
       setSyncingConfigId(configId);
       setError('');
       setSuccess('');
-      const response = await syncAPI.triggerSync(configId);
+      await syncAPI.triggerSync(configId);
 
       // Wait a moment for the background task to complete
       await new Promise(resolve => setTimeout(resolve, 2000));
@@ -104,6 +107,11 @@ export default function Dashboard() {
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Failed to delete sync configuration');
     }
+  };
+
+  const handleViewHistory = (configId: string) => {
+    setSelectedConfigId(configId);
+    setHistoryDialogOpen(true);
   };
 
   const handleConnectAccount = async (accountType: 'source' | 'destination') => {
@@ -289,15 +297,24 @@ export default function Dashboard() {
                               </Box>
                             </Box>
                           </CardContent>
-                          <CardActions sx={{ justifyContent: 'space-between' }}>
-                            <Button
-                              variant="contained"
-                              startIcon={<PlayArrow />}
-                              onClick={() => handleTriggerSync(config.id)}
-                              disabled={syncingConfigId === config.id}
-                            >
-                              {syncingConfigId === config.id ? 'Syncing...' : 'Trigger Sync Now'}
-                            </Button>
+                          <CardActions sx={{ justifyContent: 'space-between', flexWrap: 'wrap', gap: 1 }}>
+                            <Box sx={{ display: 'flex', gap: 1 }}>
+                              <Button
+                                variant="contained"
+                                startIcon={<PlayArrow />}
+                                onClick={() => handleTriggerSync(config.id)}
+                                disabled={syncingConfigId === config.id}
+                              >
+                                {syncingConfigId === config.id ? 'Syncing...' : 'Trigger Sync Now'}
+                              </Button>
+                              <Button
+                                variant="outlined"
+                                startIcon={<History />}
+                                onClick={() => handleViewHistory(config.id)}
+                              >
+                                View History
+                              </Button>
+                            </Box>
                             <Button
                               variant="outlined"
                               color="error"
@@ -319,9 +336,8 @@ export default function Dashboard() {
             {oauthStatus?.source_connected && oauthStatus?.destination_connected && (
               <Grid item xs={12}>
                 <SyncConfigForm
-                  onConfigCreated={(config: SyncConfig) => {
-                    console.log('Sync config created:', config);
-                    fetchSyncConfigs(); // Refresh the list
+                  onConfigCreated={() => {
+                    fetchSyncConfigs();
                   }}
                 />
               </Grid>
@@ -329,6 +345,15 @@ export default function Dashboard() {
           </Grid>
         )}
       </Container>
+
+      {/* Sync History Dialog */}
+      {selectedConfigId && (
+        <SyncHistoryDialog
+          open={historyDialogOpen}
+          onClose={() => setHistoryDialogOpen(false)}
+          configId={selectedConfigId}
+        />
+      )}
     </>
   );
 }
