@@ -44,7 +44,11 @@ export default function SyncHistoryDialog({ open, onClose, configId }: SyncHisto
       const response = await syncAPI.getSyncLogs(configId);
       setLogs(response.data);
     } catch (err: any) {
-      setError('Failed to fetch sync history');
+      if (err.response?.status === 404) {
+        setError('Sync configuration not found. It may have been deleted.');
+      } else {
+        setError(err.response?.data?.detail || 'Failed to fetch sync history');
+      }
     } finally {
       setLoading(false);
     }

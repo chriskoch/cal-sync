@@ -54,6 +54,8 @@ export interface CalendarItem {
   time_zone?: string;
   access_role?: string;
   is_primary?: boolean;
+  background_color?: string;
+  color_id?: string;
 }
 
 export interface SyncConfig {
@@ -62,6 +64,7 @@ export interface SyncConfig {
   dest_calendar_id: string;
   is_active: boolean;
   sync_lookahead_days: number;
+  destination_color_id?: string;
   last_synced_at?: string;
 }
 
@@ -105,8 +108,8 @@ export const calendarsAPI = {
 };
 
 export const syncAPI = {
-  createConfig: (source_calendar_id: string, dest_calendar_id: string, sync_lookahead_days = 90) =>
-    api.post<SyncConfig>('/sync/config', { source_calendar_id, dest_calendar_id, sync_lookahead_days }),
+  createConfig: (source_calendar_id: string, dest_calendar_id: string, sync_lookahead_days = 90, destination_color_id?: string) =>
+    api.post<SyncConfig>('/sync/config', { source_calendar_id, dest_calendar_id, sync_lookahead_days, destination_color_id }),
 
   listConfigs: () => api.get<SyncConfig[]>('/sync/config'),
 

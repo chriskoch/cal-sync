@@ -15,7 +15,7 @@ import { calendarsAPI, CalendarItem } from '../services/api';
 interface CalendarSelectorProps {
   accountType: 'source' | 'destination';
   value: string;
-  onChange: (calendarId: string) => void;
+  onChange: (calendarId: string, calendar?: CalendarItem) => void;
   label: string;
 }
 
@@ -47,7 +47,9 @@ export default function CalendarSelector({
   }, [accountType]);
 
   const handleChange = (event: SelectChangeEvent) => {
-    onChange(event.target.value);
+    const selectedId = event.target.value;
+    const selectedCalendar = calendars.find(cal => cal.id === selectedId);
+    onChange(selectedId, selectedCalendar);
   };
 
   if (loading) {
