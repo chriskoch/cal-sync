@@ -20,11 +20,14 @@ export default function Login() {
   const [searchParams] = useSearchParams();
 
   // Check if we have a token from OAuth callback
+  // Note: This is also handled in AuthContext, but we keep this as a backup
+  // The token should be extracted by AuthContext before reaching this component
   useEffect(() => {
     const token = searchParams.get('token');
     if (token) {
-      // Store token and redirect to dashboard
+      // Store token - AuthContext will handle authentication and redirect
       localStorage.setItem('access_token', token);
+      // Trigger a page reload to let AuthContext pick up the token
       window.location.href = '/dashboard';
     }
   }, [searchParams]);

@@ -12,7 +12,7 @@ Base.metadata.create_all(bind=engine)
 app = FastAPI(
     title="Calendar Sync API",
     description="Multi-tenant SaaS for syncing Google Calendar events",
-    version="0.6.1",
+    version="0.6.2",
     debug=settings.debug,
 )
 

@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.2] - 2025-12-20
+
+### Fixed
+- **CRITICAL**: Fixed OAuth registration flow redirect issue
+  - ProtectedRoute now preserves query parameters when redirecting to login
+  - Token extraction from URL now happens before authentication check in AuthContext
+  - Prevents token loss during OAuth callback redirect, allowing users to complete registration
+  - Removed duplicate token extraction logic and consolidated into single useEffect
+
 ## [0.6.1] - 2025-12-20
 
 ### Security
