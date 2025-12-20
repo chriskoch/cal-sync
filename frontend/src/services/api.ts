@@ -93,6 +93,9 @@ export const authAPI = {
     ),
 
   getCurrentUser: () => api.get<User>('/auth/me'),
+
+  changePassword: (current_password: string, new_password: string) =>
+    api.post<{ message: string }>('/auth/change-password', { current_password, new_password }),
 };
 
 export const oauthAPI = {
