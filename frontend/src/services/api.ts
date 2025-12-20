@@ -83,14 +83,20 @@ export interface SyncLog {
 
 // API methods
 export const authAPI = {
-  register: (email: string, password: string, full_name?: string) =>
-    api.post<User>('/auth/register', { email, password, full_name }),
+  register: (email: string, password: string, full_name: string | undefined, recaptcha_token: string) =>
+    api.post<User>('/auth/register', { email, password, full_name, recaptcha_token }),
 
-  login: (username: string, password: string) =>
-    api.post<{ access_token: string; token_type: string }>('/auth/token',
-      new URLSearchParams({ username, password }),
+  login: (username: string, password: string, recaptcha_token?: string) => {
+    const params = new URLSearchParams({ username, password });
+    if (recaptcha_token) {
+      params.append('recaptcha_token', recaptcha_token);
+    }
+    return api.post<{ access_token: string; token_type: string }>(
+      '/auth/token',
+      params,
       { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
-    ),
+    );
+  },
 
   getCurrentUser: () => api.get<User>('/auth/me'),
 
