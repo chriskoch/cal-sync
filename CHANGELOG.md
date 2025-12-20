@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.1] - 2025-12-20
+
+### Security
+- **CRITICAL**: Fixed security vulnerability in OAuth registration flow
+  - Registration now rejects attempts for existing users
+  - Prevents attackers from overwriting OAuth tokens by gaining access to a victim's Google account
+  - Existing users must use the login flow instead of registration
+
+### Fixed
+- OAuth registration flow no longer allows updating source tokens for existing users
+- Added explicit check to reject registration attempts for emails that already have associated user accounts
+
 ## [0.6.0] - 2025-12-20
 
 ### Changed

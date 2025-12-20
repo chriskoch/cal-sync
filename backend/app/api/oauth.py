@@ -169,19 +169,26 @@ def oauth_callback(code: str, state: str, db: Session = Depends(get_db)):
     # Handle registration flow
     if account_type == "register":
         # Check if user already exists by email
-        user = db.query(User).filter(User.email == google_email).first()
+        existing_user = db.query(User).filter(User.email == google_email).first()
         
-        if not user:
-            # Create new user
-            user = User(
-                email=google_email,
-                full_name=None,  # Could be extracted from Google profile if needed
-                is_active=True,
+        if existing_user:
+            # Security: Reject registration attempts for existing users
+            # This prevents attackers from overwriting OAuth tokens by gaining access to a victim's Google account
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"An account with email {google_email} already exists. Please sign in instead.",
             )
-            db.add(user)
-            db.flush()  # Flush to get user.id
         
-        # Create or update source OAuth token
+        # Create new user
+        user = User(
+            email=google_email,
+            full_name=None,  # Could be extracted from Google profile if needed
+            is_active=True,
+        )
+        db.add(user)
+        db.flush()  # Flush to get user.id
+        
+        # Create source OAuth token for new user
         _upsert_oauth_token(
             db=db,
             user_id=str(user.id),
