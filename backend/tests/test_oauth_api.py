@@ -376,11 +376,23 @@ class TestOAuthRegistration:
     @patch('googleapiclient.discovery.build')
     @patch('app.api.oauth.create_flow')
     @patch('app.api.oauth.oauth_states')
-    def test_oauth_registration_existing_user_updates_source_token(
+    def test_oauth_registration_existing_user_rejected(
         self, mock_states, mock_create_flow, mock_build, 
         client, db, test_user, mock_oauth_credentials, mock_google_calendar_api
     ):
-        """Test OAuth registration with existing user updates source token."""
+        """Test OAuth registration with existing user is rejected for security."""
+        # Setup existing source token to verify it's not modified
+        existing_token = OAuthToken(
+            user_id=test_user.id,
+            account_type="source",
+            google_email="existing@example.com",
+            access_token_encrypted=encrypt_token("existing_access"),
+            refresh_token_encrypted=encrypt_token("existing_refresh"),
+            scopes=["https://www.googleapis.com/auth/calendar"],
+        )
+        db.add(existing_token)
+        db.commit()
+
         # Setup state for registration
         state_token = "test_registration_state_existing"
         mock_states.pop = Mock(return_value={
@@ -394,7 +406,7 @@ class TestOAuthRegistration:
         mock_flow.credentials = mock_oauth_credentials
         mock_create_flow.return_value = mock_flow
 
-        # Mock Google Calendar API (return test_user email)
+        # Mock Google Calendar API (return test_user email - existing user)
         mock_google_calendar_api.calendarList().get().execute.return_value = {
             "id": test_user.email
         }
@@ -405,14 +417,19 @@ class TestOAuthRegistration:
             follow_redirects=False
         )
 
-        # Should redirect to frontend with token
-        assert response.status_code == status.HTTP_307_TEMPORARY_REDIRECT
-        assert "dashboard?token=" in response.headers["location"]
+        # Should reject registration for existing user (security fix)
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert "already exists" in response.json()["detail"].lower()
+        assert test_user.email in response.json()["detail"]
 
-        # Verify source token was created/updated
+        # Verify existing token was NOT modified (security check)
         token = db.query(OAuthToken).filter(
             OAuthToken.user_id == test_user.id,
             OAuthToken.account_type == "source"
         ).first()
         assert token is not None
-        assert token.google_email == test_user.email
+        assert token.google_email == "existing@example.com"
+        # Decrypt and compare actual token values (encryption is non-deterministic)
+        from app.core.security import decrypt_token
+        decrypted_token = decrypt_token(token.access_token_encrypted)
+        assert decrypted_token == "existing_access"
