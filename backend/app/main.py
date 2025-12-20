@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.database import engine, Base
 from app.api import auth, oauth, calendars, sync
+from app.middleware import SecurityHeadersMiddleware
 
 # Create database tables
 Base.metadata.create_all(bind=engine)
@@ -23,6 +24,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Add security headers middleware
+app.add_middleware(SecurityHeadersMiddleware)
 
 # Register API routers
 app.include_router(auth.router)
