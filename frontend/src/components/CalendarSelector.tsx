@@ -36,7 +36,8 @@ export default function CalendarSelector({
         const response = await calendarsAPI.listCalendars(accountType);
         setCalendars(response.data.calendars);
         setError('');
-      } catch (err: any) {
+      } catch (err: unknown) {
+        console.error(`Failed to fetch ${accountType} calendars:`, err);
         setError(`Failed to fetch ${accountType} calendars`);
       } finally {
         setLoading(false);

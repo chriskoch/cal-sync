@@ -15,7 +15,6 @@ google-auth-oauthlib==1.2.0
 
 # Security
 python-jose[cryptography]==3.3.0
-bcrypt==4.1.2
 cryptography==42.0.0
 
 # Environment
@@ -30,5 +29,6 @@ email-validator==2.1.0
 pytest==7.4.4
 pytest-asyncio==0.23.3
 pytest-mock==3.12.0
+pytest-xdist==3.5.0
 httpx==0.26.0
 faker==22.0.0

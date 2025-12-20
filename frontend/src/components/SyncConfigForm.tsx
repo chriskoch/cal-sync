@@ -74,8 +74,9 @@ export default function SyncConfigForm({ onConfigCreated }: SyncConfigFormProps)
       if (onConfigCreated) {
         onConfigCreated(response.data);
       }
-    } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to create sync configuration');
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { detail?: string } } };
+      setError(error.response?.data?.detail || 'Failed to create sync configuration');
     } finally {
       setLoading(false);
     }

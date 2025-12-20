@@ -55,22 +55,26 @@ docker compose down
 └── docker-compose.yml     # Multi-container orchestration
 ```
 
-### Dual OAuth Flow
+### Google OAuth-Only Authentication
 
-**Key Innovation:** Single OAuth client ID used for two separate authentications per user.
+**Key Innovation:** Google OAuth is used for both user authentication and calendar access. The registered Google account automatically becomes the source account.
 
 ```
 User Authentication Flow:
-1. User registers/logs in to the web app (username/password)
-2. User connects source Google account (OAuth flow #1)
-   → Stores OAuth tokens in database (oauth_tokens table)
-3. User connects destination Google account (OAuth flow #2)
-   → Stores separate OAuth tokens in database
-4. User creates sync configurations linking source → destination calendars
+1. User clicks "Sign in with Google" on login page
+2. Google OAuth flow initiates (account_type: "register")
+3. After OAuth callback:
+   - If new user: Creates user record (email from Google, no password)
+   - Creates source OAuth token automatically (account_type: "source")
+   - Generates JWT token for API authentication
+   - Redirects to dashboard with JWT token
+4. User connects destination Google account (OAuth flow #2)
+   → Stores separate OAuth tokens in database (account_type: "destination")
+5. User creates sync configurations linking source → destination calendars
 ```
 
 **Database Schema:**
-- `users`: User accounts (username, hashed password)
+- `users`: User accounts (email from Google OAuth, no passwords)
 - `oauth_tokens`: OAuth tokens per user per account_type (source/destination)
 - `sync_configs`: Calendar sync configurations (source_calendar_id, dest_calendar_id, settings)
 - `sync_logs`: Sync execution history (events created/updated/deleted, status, errors)
@@ -149,13 +153,15 @@ Past events are never synced or modified.
 ## API Endpoints
 
 ### Authentication
-- `POST /auth/register` - Create new user account
-- `POST /auth/token` - Login with username/password, returns JWT
 - `GET /auth/me` - Get current user info
 
 ### OAuth
-- `GET /oauth/start/{account_type}` - Initiate OAuth flow (source/destination)
+- `GET /oauth/start/{account_type}` - Initiate OAuth flow
+  - `account_type`: "register" (no auth required), "source" (auth required), "destination" (auth required)
+  - For "register": Creates user + source OAuth token, returns JWT via redirect
 - `GET /oauth/callback` - OAuth callback handler
+  - Handles registration (creates user + source token) or connects source/destination
+  - For registration: Generates JWT and redirects to frontend with token in URL
 - `GET /oauth/status` - Check OAuth connection status
 
 ### Calendars
@@ -210,7 +216,14 @@ Past events are never synced or modified.
 
 ### Backend Tests
 ```bash
+# Run all tests
 docker compose exec backend pytest -v
+
+# Run tests in parallel (faster)
+docker compose exec backend pytest -n auto
+
+# Run with coverage
+docker compose exec backend pytest --cov=app --cov-report=html
 ```
 
 **Test Coverage:**
@@ -222,11 +235,31 @@ docker compose exec backend pytest -v
 1. Sync engine: Event creation, updates, deletions, error handling
 2. OAuth API: Authorization flow, token storage, status checks
 3. Sync API: Configuration CRUD, manual triggers, history
-4. Auth API: Registration, login, token validation
+4. Auth API: JWT token validation (OAuth-only, no password auth)
+
+**Test Optimizations:**
+- Session-scoped database fixtures (3-5x faster)
+- Shared mock fixtures for OAuth and Google Calendar API
+- Parallel execution support via pytest-xdist
+- Test utilities for common operations
+
+### Frontend Tests
+```bash
+cd frontend
+npm test          # Run tests in watch mode
+npm test -- --run # Run tests once
+```
+
+**Test Setup:**
+- Vitest for test runner
+- React Testing Library for component testing
+- TypeScript type checking
+- ESLint for code quality
 
 ### Frontend
 - React components with TypeScript type checking
 - Material-UI for consistent UI/UX
+- ESLint configured with TypeScript support
 
 ## Key Features
 
@@ -251,6 +284,7 @@ docker compose exec backend pytest -v
 2. Add request/response Pydantic models
 3. Add authentication dependency if needed: `current_user: User = Depends(get_current_user)`
 4. Add tests in [backend/tests/](backend/tests/)
+5. Run linters: `cd frontend && npm run lint` and check backend with IDE linter
 
 ### Add new database column
 1. Modify SQLAlchemy model in [backend/app/models/](backend/app/models/)
@@ -266,6 +300,21 @@ docker compose exec backend pytest -v
 3. Check backend logs: `docker compose logs backend`
 4. Verify OAuth tokens are valid via `/oauth/status` endpoint
 5. Check event extended properties for `source_id`
+
+### Code Quality
+```bash
+# Frontend linting
+cd frontend && npm run lint
+
+# Frontend type checking
+cd frontend && npm run build
+
+# Backend tests
+docker compose exec backend pytest -v
+
+# All tests
+docker compose exec backend pytest -v && cd frontend && npm test -- --run
+```
 
 ## Architecture Decisions
 
@@ -287,8 +336,9 @@ docker compose exec backend pytest -v
 
 ## Security Considerations
 
-- **Password hashing**: bcrypt with salt
-- **JWT tokens**: Short-lived access tokens for API authentication
-- **OAuth tokens**: Stored encrypted in database, refreshed automatically
+- **Google OAuth-only authentication**: No passwords stored or required
+- **JWT tokens**: Short-lived access tokens (30 minutes) for API authentication
+- **OAuth tokens**: Stored encrypted in database with Fernet, refreshed automatically
 - **HTTPS required**: Production deployment must use HTTPS
 - **CORS configured**: Frontend-backend communication restricted
+- **Token encryption**: OAuth tokens encrypted before database storage

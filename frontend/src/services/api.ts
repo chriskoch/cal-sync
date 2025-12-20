@@ -83,26 +83,11 @@ export interface SyncLog {
 
 // API methods
 export const authAPI = {
-  register: (email: string, password: string, full_name: string | undefined) =>
-    api.post<User>('/auth/register', { email, password, full_name }),
-
-  login: (username: string, password: string) => {
-    const params = new URLSearchParams({ username, password });
-    return api.post<{ access_token: string; token_type: string }>(
-      '/auth/token',
-      params,
-      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
-    );
-  },
-
   getCurrentUser: () => api.get<User>('/auth/me'),
-
-  changePassword: (current_password: string, new_password: string) =>
-    api.post<{ message: string }>('/auth/change-password', { current_password, new_password }),
 };
 
 export const oauthAPI = {
-  startOAuth: (accountType: 'source' | 'destination') =>
+  startOAuth: (accountType: 'source' | 'destination' | 'register') =>
     api.get<{ authorization_url: string }>(`/oauth/start/${accountType}`),
 
   getStatus: () => api.get<OAuthStatus>('/oauth/status'),

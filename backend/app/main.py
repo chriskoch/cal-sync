@@ -12,7 +12,7 @@ Base.metadata.create_all(bind=engine)
 app = FastAPI(
     title="Calendar Sync API",
     description="Multi-tenant SaaS for syncing Google Calendar events",
-    version="0.5.0",
+    version="0.6.0",
     debug=settings.debug,
 )
 
@@ -38,7 +38,7 @@ app.include_router(sync.router)
 @app.get("/")
 def read_root():
     """Root endpoint."""
-    return {"message": "Calendar Sync API", "version": "0.5.0"}
+    return {"message": "Calendar Sync API", "version": "0.6.0"}
 
 
 @app.get("/health")

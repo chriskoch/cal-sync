@@ -1,18 +1,23 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Security
 from fastapi.responses import RedirectResponse
+from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from google_auth_oauthlib.flow import Flow
 from google.oauth2.credentials import Credentials
 from typing import Literal, Optional
 import secrets
+from uuid import UUID
 
 from app.database import get_db
 from app.models.user import User
 from app.models.oauth_token import OAuthToken
-from app.core.security import encrypt_token, decrypt_token
+from app.core.security import encrypt_token, decrypt_token, create_access_token, decode_access_token
 from app.api.auth import get_current_user
 from app.config import settings
+
+# Optional OAuth2 scheme for registration endpoint
+oauth2_scheme_optional = OAuth2PasswordBearer(tokenUrl="/oauth/start/register", auto_error=False)
 
 router = APIRouter(prefix="/oauth", tags=["oauth"])
 
@@ -48,25 +53,72 @@ class OAuthStatusResponse(BaseModel):
     destination_email: Optional[str]
 
 
+def get_current_user_optional(
+    token: Optional[str] = Security(oauth2_scheme_optional),
+    db: Session = Depends(get_db)
+) -> Optional[User]:
+    """Optional dependency to get current authenticated user.
+    
+    Returns None if no token provided or token is invalid.
+    Used for endpoints that work with or without authentication.
+    """
+    if token is None:
+        return None
+    try:
+        # Reuse get_current_user logic but return None instead of raising
+        payload = decode_access_token(token)
+        if payload is None:
+            return None
+        user_id = payload.get("sub")
+        if user_id is None:
+            return None
+        try:
+            user_uuid = UUID(user_id)
+        except (ValueError, AttributeError):
+            return None
+        user = db.query(User).filter(User.id == user_uuid).first()
+        if user is None or not user.is_active:
+            return None
+        return user
+    except Exception:
+        return None
+
+
 @router.get("/start/{account_type}", response_model=OAuthStartResponse)
 def start_oauth(
-    account_type: Literal["source", "destination"],
-    current_user: User = Depends(get_current_user),
+    account_type: Literal["source", "destination", "register"],
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(get_current_user_optional),
 ):
     """
-    Initiate Web OAuth flow for source or destination account.
-
-    Migrated from auth.py lines 33-36 (Desktop OOB flow → Web redirect flow).
+    Initiate Web OAuth flow for registration, source, or destination account.
+    
+    - "register": Unauthenticated registration/login via Google OAuth
+    - "source": Connect source account (requires authentication)
+    - "destination": Connect destination account (requires authentication)
     """
+    # For source/destination, require authentication
+    if account_type != "register":
+        if current_user is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Authentication required",
+            )
+    
     redirect_uri = f"{settings.api_url}/oauth/callback"
     flow = create_flow(redirect_uri)
 
     # Generate state token with user_id and account_type
     state_token = secrets.token_urlsafe(32)
-    oauth_states[state_token] = {
-        "user_id": str(current_user.id),
+    state_data = {
         "account_type": account_type,
     }
+    
+    # Only include user_id if authenticated (for source/destination)
+    if account_type != "register" and current_user:
+        state_data["user_id"] = str(current_user.id)
+    
+    oauth_states[state_token] = state_data
 
     authorization_url, _ = flow.authorization_url(
         access_type="offline",
@@ -83,7 +135,8 @@ def oauth_callback(code: str, state: str, db: Session = Depends(get_db)):
     Handle OAuth callback from Google.
 
     Receives authorization code and exchanges it for tokens.
-    Stores encrypted tokens in database.
+    For registration: Creates user and source OAuth token, generates JWT.
+    For source/destination: Stores encrypted tokens in database.
     """
     # Validate state token
     state_data = oauth_states.pop(state, None)
@@ -93,8 +146,8 @@ def oauth_callback(code: str, state: str, db: Session = Depends(get_db)):
             detail="Invalid state token",
         )
 
-    user_id = state_data["user_id"]
     account_type = state_data["account_type"]
+    user_id = state_data.get("user_id")  # May not exist for registration
 
     # Exchange code for tokens
     redirect_uri = f"{settings.api_url}/oauth/callback"
@@ -113,30 +166,58 @@ def oauth_callback(code: str, state: str, db: Session = Depends(get_db)):
     access_token_encrypted = encrypt_token(creds.token)
     refresh_token_encrypted = encrypt_token(creds.refresh_token) if creds.refresh_token else None
 
-    # Store in database (upsert)
-    existing_token = db.query(OAuthToken).filter(
-        OAuthToken.user_id == user_id,
-        OAuthToken.account_type == account_type,
-    ).first()
-
-    if existing_token:
-        existing_token.google_email = google_email
-        existing_token.access_token_encrypted = access_token_encrypted
-        existing_token.refresh_token_encrypted = refresh_token_encrypted
-        existing_token.token_expiry = creds.expiry
-        existing_token.scopes = creds.scopes
-    else:
-        new_token = OAuthToken(
-            user_id=user_id,
-            account_type=account_type,
+    # Handle registration flow
+    if account_type == "register":
+        # Check if user already exists by email
+        user = db.query(User).filter(User.email == google_email).first()
+        
+        if not user:
+            # Create new user
+            user = User(
+                email=google_email,
+                full_name=None,  # Could be extracted from Google profile if needed
+                is_active=True,
+            )
+            db.add(user)
+            db.flush()  # Flush to get user.id
+        
+        # Create or update source OAuth token
+        _upsert_oauth_token(
+            db=db,
+            user_id=str(user.id),
+            account_type="source",
             google_email=google_email,
             access_token_encrypted=access_token_encrypted,
             refresh_token_encrypted=refresh_token_encrypted,
             token_expiry=creds.expiry,
             scopes=creds.scopes,
         )
-        db.add(new_token)
+        db.commit()
 
+        # Generate JWT token
+        access_token = create_access_token(data={"sub": str(user.id)})
+        
+        # Redirect to frontend with JWT token
+        return RedirectResponse(url=f"{settings.frontend_url}/dashboard?token={access_token}")
+    
+    # Handle source/destination connection (existing flow)
+    if not user_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User ID missing from state",
+        )
+
+    # Store in database (upsert)
+    _upsert_oauth_token(
+        db=db,
+        user_id=user_id,
+        account_type=account_type,
+        google_email=google_email,
+        access_token_encrypted=access_token_encrypted,
+        refresh_token_encrypted=refresh_token_encrypted,
+        token_expiry=creds.expiry,
+        scopes=creds.scopes,
+    )
     db.commit()
 
     # Redirect to frontend success page
@@ -165,6 +246,56 @@ def get_oauth_status(
         "destination_connected": dest_token is not None,
         "destination_email": dest_token.google_email if dest_token else None,
     }
+
+
+def _upsert_oauth_token(
+    db: Session,
+    user_id: str,
+    account_type: str,
+    google_email: str,
+    access_token_encrypted: str,
+    refresh_token_encrypted: Optional[str],
+    token_expiry,
+    scopes: list,
+) -> OAuthToken:
+    """Helper function to create or update OAuth token.
+    
+    Args:
+        user_id: User ID as string (will be converted to UUID)
+        account_type: "source" or "destination"
+        google_email: Google account email
+        access_token_encrypted: Encrypted access token
+        refresh_token_encrypted: Encrypted refresh token (optional)
+        token_expiry: Token expiration datetime
+        scopes: OAuth scopes list
+    """
+    # Convert string user_id to UUID
+    user_uuid = UUID(user_id) if isinstance(user_id, str) else user_id
+    
+    existing_token = db.query(OAuthToken).filter(
+        OAuthToken.user_id == user_uuid,
+        OAuthToken.account_type == account_type,
+    ).first()
+
+    if existing_token:
+        existing_token.google_email = google_email
+        existing_token.access_token_encrypted = access_token_encrypted
+        existing_token.refresh_token_encrypted = refresh_token_encrypted
+        existing_token.token_expiry = token_expiry
+        existing_token.scopes = scopes
+        return existing_token
+    else:
+        new_token = OAuthToken(
+            user_id=user_uuid,
+            account_type=account_type,
+            google_email=google_email,
+            access_token_encrypted=access_token_encrypted,
+            refresh_token_encrypted=refresh_token_encrypted,
+            token_expiry=token_expiry,
+            scopes=scopes,
+        )
+        db.add(new_token)
+        return new_token
 
 
 def get_credentials_from_db(user_id: str, account_type: str, db: Session) -> Optional[Credentials]:
