@@ -27,7 +27,17 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check if user is already logged in
+    // First, check for token in URL (from OAuth callback) - this must happen before localStorage check
+    // to ensure token is available when ProtectedRoute checks authentication
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlToken = urlParams.get('token');
+    if (urlToken) {
+      localStorage.setItem('access_token', urlToken);
+      // Remove token from URL immediately
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+
+    // Check if user is already logged in (from localStorage or URL token)
     const token = localStorage.getItem('access_token');
     if (token) {
       authAPI
@@ -43,32 +53,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         });
     } else {
       setLoading(false);
-    }
-  }, []);
-
-  // Refresh user data (called after OAuth login)
-  const refreshUser = async () => {
-    const token = localStorage.getItem('access_token');
-    if (token) {
-      try {
-        const response = await authAPI.getCurrentUser();
-        setUser(response.data);
-      } catch {
-        localStorage.removeItem('access_token');
-        setUser(null);
-      }
-    }
-  };
-
-  // Check for token in URL (from OAuth callback)
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const token = urlParams.get('token');
-    if (token) {
-      localStorage.setItem('access_token', token);
-      // Remove token from URL
-      window.history.replaceState({}, '', window.location.pathname);
-      refreshUser();
     }
   }, []);
 
