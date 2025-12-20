@@ -75,16 +75,17 @@ DEBUG=false  # or omit this line
 Users must create passwords with:
 - Minimum 8 characters
 - At least one uppercase letter
-- At least one lowercase letter  
+- At least one lowercase letter
 - At least one number
 - At least one special character
 
 ## Rate Limiting
 
-API endpoints are rate-limited to prevent brute force attacks:
-- Login: 5 attempts per minute per IP
-- Registration: 10 per hour per IP
-- OAuth: 20 per hour per IP
+**⚠️ NOT CURRENTLY IMPLEMENTED** - Rate limiting should be added to prevent brute force attacks:
+- Recommended: Login endpoint (5 attempts per minute per IP)
+- Recommended: Registration endpoint (10 per hour per IP)
+- Recommended: OAuth endpoints (20 per hour per IP)
+- Consider using: slowapi or fastapi-limiter libraries
 
 ## HTTPS
 
@@ -96,10 +97,13 @@ API endpoints are rate-limited to prevent brute force attacks:
 
 ## Token Security
 
-- JWT tokens expire after 30 minutes
-- Access tokens stored in HTTP-only cookies (not localStorage)
-- Refresh tokens encrypted in database with Fernet
-- CSRF protection enabled for cookie-based auth
+- JWT tokens expire after 30 minutes (configured via JWT_EXPIRATION_MINUTES)
+- **⚠️ Access tokens currently stored in localStorage (vulnerable to XSS attacks)**
+  - For production, consider migrating to HTTP-only cookies with CSRF protection
+  - localStorage is convenient but less secure than HttpOnly cookies
+- OAuth refresh tokens encrypted in database with Fernet
+- **⚠️ CSRF protection NOT currently implemented**
+  - Required if migrating to cookie-based authentication
 
 ## Database Security
 
@@ -136,6 +140,19 @@ If secrets are compromised:
 ## Reporting Security Issues
 
 To report security vulnerabilities:
-- Email: security@yourcompany.com (update this)
+- **For production use**: Set up a dedicated security contact email
 - Do NOT create public GitHub issues for security bugs
 - Allow 90 days for fix before public disclosure
+
+## Known Security Limitations
+
+This is a development/personal project with the following known security limitations:
+
+1. **Token Storage**: JWT tokens stored in localStorage (vulnerable to XSS)
+2. **Rate Limiting**: Not implemented (vulnerable to brute force attacks)
+3. **CSRF Protection**: Not implemented (would be needed for cookie-based auth)
+4. **Password Reset**: Not implemented
+5. **Email Verification**: Not implemented
+6. **2FA/MFA**: Not implemented
+
+For production deployment, consider addressing these limitations based on your security requirements.

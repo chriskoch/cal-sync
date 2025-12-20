@@ -78,6 +78,12 @@ API_URL=http://localhost:8000
 FRONTEND_URL=http://localhost:3033
 ```
 
+Frontend dev server uses `frontend/.env`:
+
+```bash
+VITE_API_URL=http://localhost:8000
+```
+
 ### 3. Start PostgreSQL Database
 
 ```bash
@@ -232,7 +238,6 @@ cal-sync/
 │   ├── package.json
 │   ├── vite.config.ts
 │   └── tsconfig.json
-├── terraform/                    # Production infrastructure (TBD)
 ├── docker-compose.yml
 ├── .env.example
 ├── auth.py                      # Legacy CLI OAuth

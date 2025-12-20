@@ -168,7 +168,7 @@ def test_user_token(client, test_user) -> str:
     """
     response = client.post(
         "/auth/token",
-        data={"username": test_user.email, "password": "testpassword123"},
+        data={"username": test_user.email, "password": "TestPassword123!"},
     )
     return response.json()["access_token"]
 

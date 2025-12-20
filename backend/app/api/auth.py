@@ -1,10 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Form
+from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, EmailStr, field_serializer, field_validator, Field
 from typing import Optional
 from uuid import UUID
-from datetime import datetime, timedelta
 import re
 
 from app.database import get_db
@@ -15,14 +14,9 @@ from app.core.security import (
     create_access_token,
     decode_access_token,
 )
-from app.core.recaptcha import verify_recaptcha
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token")
-
-# In-memory storage for login failure tracking
-# In production, use Redis or database
-login_failures: dict[str, dict] = {}
 
 
 # Pydantic models
@@ -30,7 +24,6 @@ class UserRegister(BaseModel):
     email: EmailStr
     password: str = Field(min_length=8, max_length=128)
     full_name: Optional[str] = None
-    recaptcha_token: str = Field(..., description="Google reCAPTCHA v3 token")
 
     @field_validator('password')
     @classmethod
@@ -156,16 +149,8 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
 
 
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
-async def register(user_data: UserRegister, db: Session = Depends(get_db)):
+def register(user_data: UserRegister, db: Session = Depends(get_db)):
     """Register a new user."""
-    # Verify reCAPTCHA token (always required for registration)
-    is_valid, score, error_msg = await verify_recaptcha(user_data.recaptcha_token, "register")
-    if not is_valid:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"reCAPTCHA verification failed: {error_msg}",
-        )
-
     # Check if user already exists
     existing_user = db.query(User).filter(User.email == user_data.email).first()
     if existing_user:
@@ -188,70 +173,18 @@ async def register(user_data: UserRegister, db: Session = Depends(get_db)):
     return new_user
 
 
-def clean_old_login_failures():
-    """Remove login failure entries older than 1 hour."""
-    now = datetime.now()
-    to_remove = [
-        email for email, data in login_failures.items()
-        if (now - data['last_attempt']).total_seconds() > 3600
-    ]
-    for email in to_remove:
-        del login_failures[email]
-
-
-def get_login_failure_count(email: str) -> int:
-    """Get the number of failed login attempts for an email."""
-    clean_old_login_failures()
-    return login_failures.get(email, {}).get('count', 0)
-
-
-def record_login_failure(email: str):
-    """Record a failed login attempt for an email."""
-    if email not in login_failures:
-        login_failures[email] = {'count': 0, 'last_attempt': datetime.now()}
-    login_failures[email]['count'] += 1
-    login_failures[email]['last_attempt'] = datetime.now()
-
-
-def reset_login_failures(email: str):
-    """Reset login failure count for an email after successful login."""
-    if email in login_failures:
-        del login_failures[email]
-
-
 @router.post("/token", response_model=Token)
-async def login(
+def login(
     form_data: OAuth2PasswordRequestForm = Depends(),
-    recaptcha_token: Optional[str] = Form(None),
     db: Session = Depends(get_db)
 ):
     """Login and get JWT access token."""
     email = form_data.username
 
-    # Check if reCAPTCHA is required (after 3 failed attempts)
-    failure_count = get_login_failure_count(email)
-    if failure_count >= 3:
-        if not recaptcha_token:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="reCAPTCHA verification required after multiple failed login attempts",
-            )
-
-        # Verify reCAPTCHA token
-        is_valid, score, error_msg = await verify_recaptcha(recaptcha_token, "login")
-        if not is_valid:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"reCAPTCHA verification failed: {error_msg}",
-            )
-
     # Attempt to authenticate user
     user = db.query(User).filter(User.email == email).first()
 
     if not user or not verify_password(form_data.password, user.hashed_password):
-        # Record failed attempt
-        record_login_failure(email)
-
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
@@ -260,9 +193,6 @@ async def login(
 
     if not user.is_active:
         raise HTTPException(status_code=400, detail="Inactive user")
-
-    # Successful login - reset failure count
-    reset_login_failures(email)
 
     access_token = create_access_token(data={"sub": str(user.id)})
     return {"access_token": access_token, "token_type": "bearer"}
