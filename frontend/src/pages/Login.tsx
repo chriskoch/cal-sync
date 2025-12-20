@@ -11,6 +11,7 @@ import {
   Paper,
 } from '@mui/material';
 import { useAuth } from '../context/AuthContext';
+import { getLoginErrorMessage } from '../utils/errorMessages';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -29,7 +30,7 @@ export default function Login() {
       await login(email, password);
       navigate('/dashboard');
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Login failed. Please try again.');
+      setError(getLoginErrorMessage(err));
     } finally {
       setLoading(false);
     }
