@@ -10,9 +10,9 @@ import {
   Alert,
   Paper,
 } from '@mui/material';
-import { useGoogleReCaptcha } from 'react-google-recaptcha-v3';
 import { useAuth } from '../context/AuthContext';
 import { getLoginErrorMessage } from '../utils/errorMessages';
+import { executeRecaptcha } from '../utils/recaptcha';
 
 const LOGIN_FAILURES_KEY = 'login_failures';
 
@@ -82,7 +82,6 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [failureCount, setFailureCount] = useState(0);
   const { login } = useAuth();
-  const { executeRecaptcha } = useGoogleReCaptcha();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -102,12 +101,6 @@ export default function Login() {
 
       // Generate reCAPTCHA token if needed (after 3 failures)
       if (failureCount >= 3) {
-        if (!executeRecaptcha) {
-          setError('reCAPTCHA not ready. Please try again.');
-          setLoading(false);
-          return;
-        }
-
         recaptchaToken = await executeRecaptcha('login');
       }
 
