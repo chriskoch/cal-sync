@@ -150,12 +150,12 @@ Past events are never synced or modified.
 
 ### Authentication
 - `POST /auth/register` - Create new user account
-- `POST /auth/login` - Login with username/password, returns JWT
+- `POST /auth/token` - Login with username/password, returns JWT
 - `GET /auth/me` - Get current user info
 
 ### OAuth
-- `POST /oauth/start/{account_type}` - Initiate OAuth flow (source/destination)
-- `GET /oauth/callback/{account_type}` - OAuth callback handler
+- `GET /oauth/start/{account_type}` - Initiate OAuth flow (source/destination)
+- `GET /oauth/callback` - OAuth callback handler
 - `GET /oauth/status` - Check OAuth connection status
 
 ### Calendars
@@ -262,7 +262,7 @@ docker compose exec backend pytest -v
 
 ### Debug sync issues
 1. Check sync logs in UI (Dashboard → View History)
-2. Check database: `docker compose exec db psql -U postgres -d cal_sync`
+2. Check database: `docker compose exec db psql -U postgres -d calsync`
 3. Check backend logs: `docker compose logs backend`
 4. Verify OAuth tokens are valid via `/oauth/status` endpoint
 5. Check event extended properties for `source_id`

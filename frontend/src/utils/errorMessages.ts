@@ -27,7 +27,7 @@ export function getErrorMessage(error: ApiError, fallbackMessage: string): strin
     return 'Network error. Please check your connection and try again.';
   }
 
-  const { status, data } = error.response;
+  const { data } = error.response;
   const detail = data?.detail;
 
   // No detail provided

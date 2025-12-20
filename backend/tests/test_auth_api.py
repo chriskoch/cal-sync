@@ -155,16 +155,17 @@ class TestPasswordValidation:
         """Test passwords with different special characters all work."""
         special_chars = ['!', '@', '#', '$', '%', '^', '&', '*', '(', ')']
 
-        for char in special_chars:
+        for idx, char in enumerate(special_chars):
             response = client.post(
                 "/auth/register",
                 json={
-                    "email": f"user{char}@example.com",
+                    "email": f"user{idx}@example.com",
                     "password": f"Password123{char}",
                 }
             )
 
-            assert response.status_code == status.HTTP_201_CREATED
+            assert response.status_code == status.HTTP_201_CREATED, \
+                f"Failed for special char '{char}': {response.json()}"
 
 
 @pytest.mark.integration

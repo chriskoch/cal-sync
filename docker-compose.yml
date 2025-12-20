@@ -25,9 +25,6 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-calsync}
       OAUTH_CLIENT_ID: ${OAUTH_CLIENT_ID}
       OAUTH_CLIENT_SECRET: ${OAUTH_CLIENT_SECRET}
-      RECAPTCHA_SITE_KEY: ${RECAPTCHA_SITE_KEY}
-      RECAPTCHA_SECRET_KEY: ${RECAPTCHA_SECRET_KEY}
-      RECAPTCHA_MIN_SCORE: ${RECAPTCHA_MIN_SCORE:-0.5}
       JWT_SECRET: ${JWT_SECRET}
       ENCRYPTION_KEY: ${ENCRYPTION_KEY}
       API_URL: http://localhost:8000
@@ -50,7 +47,6 @@ services:
     container_name: cal-sync-frontend
     environment:
       VITE_API_URL: http://localhost:8000
-      VITE_RECAPTCHA_SITE_KEY: ${RECAPTCHA_SITE_KEY}
     ports:
       - "3033:3033"
     depends_on:

@@ -187,7 +187,7 @@ describe('AuthContext', () => {
       })
 
       await expect(
-        result.current.register('existing@example.com', 'password123')
+        result.current.register('existing@example.com', 'password123', 'Test User')
       ).rejects.toThrow('Email already registered')
 
       expect(result.current.user).toBeNull()

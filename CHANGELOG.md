@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2025-12-20
+
+### Removed
+- Google reCAPTCHA v3 Enterprise integration
+  - Removed reCAPTCHA verification from registration endpoint
+  - Removed reCAPTCHA verification from login endpoint
+  - Removed login failure tracking and conditional reCAPTCHA
+  - Removed recaptcha_token field from UserRegister model
+  - Removed backend recaptcha.py utility module
+  - Removed frontend recaptcha.ts utility module
+  - Removed reCAPTCHA script loading from App.tsx
+  - Removed reCAPTCHA environment variables from configuration
+  - Simplified authentication endpoints (converted from async to sync)
+
+### Changed
+- Authentication endpoints simplified without reCAPTCHA verification
+  - `/auth/register` now synchronous (was async)
+  - `/auth/token` now synchronous (was async)
+- Login and registration forms streamlined without reCAPTCHA token handling
+
+### Fixed
+- Test suite adjustments after reCAPTCHA removal
+  - Fixed pytest configuration (removed pytest-cov dependency)
+  - Fixed test_user_token fixture password mismatch
+  - Fixed email validation test for special characters
+
 ## [0.4.0] - 2025-12-20
 
 ### Added

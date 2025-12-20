@@ -12,7 +12,6 @@ import {
 } from '@mui/material';
 import { useAuth } from '../context/AuthContext';
 import { getRegistrationErrorMessage } from '../utils/errorMessages';
-import { executeRecaptcha } from '../utils/recaptcha';
 
 export default function Register() {
   const [email, setEmail] = useState('');
@@ -29,10 +28,7 @@ export default function Register() {
     setLoading(true);
 
     try {
-      // Generate reCAPTCHA token
-      const recaptchaToken = await executeRecaptcha('register');
-
-      await register(email, password, fullName, recaptchaToken);
+      await register(email, password, fullName);
       navigate('/dashboard');
     } catch (err: any) {
       setError(getRegistrationErrorMessage(err));

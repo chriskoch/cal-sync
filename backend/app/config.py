@@ -20,11 +20,6 @@ class Settings(BaseSettings):
     oauth_client_id: str
     oauth_client_secret: str
 
-    # Google reCAPTCHA v3
-    recaptcha_site_key: str
-    recaptcha_secret_key: str
-    recaptcha_min_score: float = 0.5
-
     # Security
     jwt_secret: str
     jwt_algorithm: str = "HS256"
@@ -33,7 +28,7 @@ class Settings(BaseSettings):
 
     # API URLs
     api_url: str = "http://localhost:8000"
-    frontend_url: str = "http://localhost:3000"
+    frontend_url: str = "http://localhost:3033"
 
     # Calendar API scopes
     google_calendar_scopes: list[str] = ["https://www.googleapis.com/auth/calendar"]
