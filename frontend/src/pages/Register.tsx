@@ -11,6 +11,7 @@ import {
   Paper,
 } from '@mui/material';
 import { useAuth } from '../context/AuthContext';
+import { getRegistrationErrorMessage } from '../utils/errorMessages';
 
 export default function Register() {
   const [email, setEmail] = useState('');
@@ -30,7 +31,7 @@ export default function Register() {
       await register(email, password, fullName);
       navigate('/dashboard');
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Registration failed. Please try again.');
+      setError(getRegistrationErrorMessage(err));
     } finally {
       setLoading(false);
     }
