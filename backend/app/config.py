@@ -20,6 +20,11 @@ class Settings(BaseSettings):
     oauth_client_id: str
     oauth_client_secret: str
 
+    # Google reCAPTCHA v3
+    recaptcha_site_key: str
+    recaptcha_secret_key: str
+    recaptcha_min_score: float = 0.5
+
     # Security
     jwt_secret: str
     jwt_algorithm: str = "HS256"

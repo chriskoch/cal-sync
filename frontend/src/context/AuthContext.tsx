@@ -4,8 +4,8 @@ import { authAPI, User } from '../services/api';
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  login: (username: string, password: string) => Promise<void>;
-  register: (email: string, password: string, fullName?: string) => Promise<void>;
+  login: (username: string, password: string, recaptchaToken?: string) => Promise<void>;
+  register: (email: string, password: string, fullName: string | undefined, recaptchaToken: string) => Promise<void>;
   logout: () => void;
   isAuthenticated: boolean;
 }
@@ -48,8 +48,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
   }, []);
 
-  const login = async (username: string, password: string) => {
-    const response = await authAPI.login(username, password);
+  const login = async (username: string, password: string, recaptchaToken?: string) => {
+    const response = await authAPI.login(username, password, recaptchaToken);
     localStorage.setItem('access_token', response.data.access_token);
 
     // Fetch user info
@@ -57,9 +57,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     setUser(userResponse.data);
   };
 
-  const register = async (email: string, password: string, fullName?: string) => {
-    await authAPI.register(email, password, fullName);
-    // Auto-login after registration
+  const register = async (email: string, password: string, fullName: string | undefined, recaptchaToken: string) => {
+    await authAPI.register(email, password, fullName, recaptchaToken);
+    // Auto-login after registration (no reCAPTCHA needed - user just registered)
     await login(email, password);
   };
 

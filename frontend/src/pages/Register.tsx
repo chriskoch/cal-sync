@@ -10,6 +10,7 @@ import {
   Alert,
   Paper,
 } from '@mui/material';
+import { useGoogleReCaptcha } from 'react-google-recaptcha-v3';
 import { useAuth } from '../context/AuthContext';
 import { getRegistrationErrorMessage } from '../utils/errorMessages';
 
@@ -20,6 +21,7 @@ export default function Register() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { register } = useAuth();
+  const { executeRecaptcha } = useGoogleReCaptcha();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -28,7 +30,16 @@ export default function Register() {
     setLoading(true);
 
     try {
-      await register(email, password, fullName);
+      // Generate reCAPTCHA token
+      if (!executeRecaptcha) {
+        setError('reCAPTCHA not ready. Please try again.');
+        setLoading(false);
+        return;
+      }
+
+      const recaptchaToken = await executeRecaptcha('register');
+
+      await register(email, password, fullName, recaptchaToken);
       navigate('/dashboard');
     } catch (err: any) {
       setError(getRegistrationErrorMessage(err));

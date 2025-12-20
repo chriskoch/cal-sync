@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import {
   Container,
@@ -10,16 +10,87 @@ import {
   Alert,
   Paper,
 } from '@mui/material';
+import { useGoogleReCaptcha } from 'react-google-recaptcha-v3';
 import { useAuth } from '../context/AuthContext';
 import { getLoginErrorMessage } from '../utils/errorMessages';
+
+const LOGIN_FAILURES_KEY = 'login_failures';
+
+interface LoginFailures {
+  [email: string]: {
+    count: number;
+    lastAttempt: string;
+  };
+}
+
+function getLoginFailureCount(email: string): number {
+  const stored = localStorage.getItem(LOGIN_FAILURES_KEY);
+  if (!stored) return 0;
+
+  try {
+    const failures: LoginFailures = JSON.parse(stored);
+    const failure = failures[email];
+
+    if (!failure) return 0;
+
+    // Check if failure is older than 1 hour
+    const lastAttempt = new Date(failure.lastAttempt);
+    const hourAgo = new Date(Date.now() - 60 * 60 * 1000);
+
+    if (lastAttempt < hourAgo) {
+      // Expired, remove it
+      delete failures[email];
+      localStorage.setItem(LOGIN_FAILURES_KEY, JSON.stringify(failures));
+      return 0;
+    }
+
+    return failure.count;
+  } catch {
+    return 0;
+  }
+}
+
+function recordLoginFailure(email: string) {
+  const stored = localStorage.getItem(LOGIN_FAILURES_KEY);
+  const failures: LoginFailures = stored ? JSON.parse(stored) : {};
+
+  failures[email] = {
+    count: (failures[email]?.count || 0) + 1,
+    lastAttempt: new Date().toISOString(),
+  };
+
+  localStorage.setItem(LOGIN_FAILURES_KEY, JSON.stringify(failures));
+}
+
+function resetLoginFailures(email: string) {
+  const stored = localStorage.getItem(LOGIN_FAILURES_KEY);
+  if (!stored) return;
+
+  try {
+    const failures: LoginFailures = JSON.parse(stored);
+    delete failures[email];
+    localStorage.setItem(LOGIN_FAILURES_KEY, JSON.stringify(failures));
+  } catch {
+    // Ignore errors
+  }
+}
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [failureCount, setFailureCount] = useState(0);
   const { login } = useAuth();
+  const { executeRecaptcha } = useGoogleReCaptcha();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    // Update failure count when email changes
+    if (email) {
+      setFailureCount(getLoginFailureCount(email));
+    }
+  }, [email]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,9 +98,30 @@ export default function Login() {
     setLoading(true);
 
     try {
-      await login(email, password);
+      let recaptchaToken: string | undefined;
+
+      // Generate reCAPTCHA token if needed (after 3 failures)
+      if (failureCount >= 3) {
+        if (!executeRecaptcha) {
+          setError('reCAPTCHA not ready. Please try again.');
+          setLoading(false);
+          return;
+        }
+
+        recaptchaToken = await executeRecaptcha('login');
+      }
+
+      await login(email, password, recaptchaToken);
+
+      // Successful login - reset failures
+      resetLoginFailures(email);
+
       navigate('/dashboard');
     } catch (err: any) {
+      // Record failed attempt
+      recordLoginFailure(email);
+      setFailureCount(getLoginFailureCount(email));
+
       setError(getLoginErrorMessage(err));
     } finally {
       setLoading(false);
@@ -57,6 +149,12 @@ export default function Login() {
           {error && (
             <Alert severity="error" sx={{ mb: 2 }}>
               {error}
+            </Alert>
+          )}
+
+          {failureCount >= 3 && (
+            <Alert severity="warning" sx={{ mb: 2 }}>
+              Multiple failed login attempts detected. reCAPTCHA verification required.
             </Alert>
           )}
 
