@@ -31,28 +31,30 @@ export default function SyncHistoryDialog({ open, onClose, configId }: SyncHisto
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    if (open) {
-      fetchLogs();
-    }
-  }, [open, configId]);
-
   const fetchLogs = async () => {
     try {
       setLoading(true);
       setError('');
       const response = await syncAPI.getSyncLogs(configId);
       setLogs(response.data);
-    } catch (err: any) {
-      if (err.response?.status === 404) {
+    } catch (err: unknown) {
+      const error = err as { response?: { status?: number; data?: { detail?: string } } };
+      if (error.response?.status === 404) {
         setError('Sync configuration not found. It may have been deleted.');
       } else {
-        setError(err.response?.data?.detail || 'Failed to fetch sync history');
+        setError(error.response?.data?.detail || 'Failed to fetch sync history');
       }
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (open) {
+      fetchLogs();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, configId]);
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString();

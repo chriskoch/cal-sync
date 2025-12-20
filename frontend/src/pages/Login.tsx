@@ -1,37 +1,52 @@
-import { useState } from 'react';
-import { useNavigate, Link as RouterLink } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Container,
   Box,
-  TextField,
   Button,
   Typography,
-  Link,
-  Alert,
   Paper,
+  Alert,
 } from '@mui/material';
+import { Google } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
-import { getLoginErrorMessage } from '../utils/errorMessages';
+import { oauthAPI } from '../services/api';
 
 export default function Login() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // Check if we have a token from OAuth callback
+  useEffect(() => {
+    const token = searchParams.get('token');
+    if (token) {
+      // Store token and redirect to dashboard
+      localStorage.setItem('access_token', token);
+      window.location.href = '/dashboard';
+    }
+  }, [searchParams]);
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/dashboard');
+    }
+  }, [isAuthenticated, navigate]);
+
+  const handleGoogleLogin = async () => {
     setError('');
     setLoading(true);
 
     try {
-      await login(email, password);
-      navigate('/dashboard');
-    } catch (err: any) {
-      setError(getLoginErrorMessage(err));
-    } finally {
+      const response = await oauthAPI.startOAuth('register');
+      // Redirect to Google OAuth
+      window.location.href = response.data.authorization_url;
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { detail?: string } } };
+      setError(error.response?.data?.detail || 'Failed to initiate Google login');
       setLoading(false);
     }
   };
@@ -51,7 +66,7 @@ export default function Login() {
             Calendar Sync
           </Typography>
           <Typography variant="h5" align="center" gutterBottom>
-            Sign in
+            Sign in with Google
           </Typography>
 
           {error && (
@@ -60,45 +75,21 @@ export default function Login() {
             </Alert>
           )}
 
-          <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1 }}>
-            <TextField
-              margin="normal"
-              required
-              fullWidth
-              id="email"
-              label="Email Address"
-              name="email"
-              autoComplete="email"
-              autoFocus
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-            <TextField
-              margin="normal"
-              required
-              fullWidth
-              name="password"
-              label="Password"
-              type="password"
-              id="password"
-              autoComplete="current-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
+          <Box sx={{ mt: 3, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
             <Button
-              type="submit"
-              fullWidth
               variant="contained"
-              sx={{ mt: 3, mb: 2 }}
+              fullWidth
+              startIcon={<Google />}
+              onClick={handleGoogleLogin}
               disabled={loading}
+              sx={{ mb: 2, py: 1.5 }}
             >
-              {loading ? 'Signing in...' : 'Sign In'}
+              {loading ? 'Connecting...' : 'Sign in with Google'}
             </Button>
-            <Box sx={{ textAlign: 'center' }}>
-              <Link component={RouterLink} to="/register" variant="body2">
-                Don't have an account? Sign Up
-              </Link>
-            </Box>
+            <Typography variant="body2" color="text.secondary" align="center" sx={{ mt: 2 }}>
+              By signing in, you agree to sync your Google Calendar events.
+              Your Google account will be used as the source calendar.
+            </Typography>
           </Box>
         </Paper>
       </Box>

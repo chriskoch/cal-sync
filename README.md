@@ -6,8 +6,9 @@ One-way synchronization of Google Calendar events between two different Google a
 
 ## How it works
 
-- Multi-tenant SaaS with user registration and JWT authentication
-- Web OAuth flow for connecting source and destination Google accounts
+- Multi-tenant SaaS with Google OAuth-only authentication
+- Registration and login via Google OAuth (registered Google account becomes source account)
+- Web OAuth flow for connecting destination Google account
 - Calendar selection UI for choosing which calendars to sync
 - Each synced event stores `source_id` and bidirectional metadata in extended properties
 - Idempotent sync mechanism preserves from original CLI version
@@ -23,7 +24,7 @@ One-way synchronization of Google Calendar events between two different Google a
 - **OAuth:** Web Application flow (migrated from Desktop OOB)
 
 **Database Schema:**
-- `users` - User accounts with JWT authentication
+- `users` - User accounts (email from Google OAuth, no passwords)
 - `oauth_tokens` - Encrypted Google OAuth tokens (Fernet encryption)
 - `calendars` - Cached calendar lists from Google
 - `sync_configs` - User sync configurations
@@ -35,12 +36,35 @@ One-way synchronization of Google Calendar events between two different Google a
 - **Local Development:**
   - Python 3.12+
   - Node.js 18+
-  - Docker (for PostgreSQL)
+  - Docker and Docker Compose
   - Google Cloud project with OAuth client
 
 - **Production Deployment:**
   - Terraform
   - GCP project with billing enabled
+
+## Quick Start
+
+```bash
+# Clone repository
+git clone <repository-url>
+cd cal-sync
+
+# Copy environment template
+cp .env.example .env
+# Edit .env with your OAuth credentials and secrets
+
+# Start all services
+docker-compose up -d
+
+# Run database migrations
+docker-compose exec backend alembic upgrade head
+
+# Access application
+# Frontend: http://localhost:3033
+# Backend API: http://localhost:8000
+# API Docs: http://localhost:8000/docs
+```
 
 ## Local Development Setup
 
@@ -130,8 +154,8 @@ Frontend runs at http://localhost:3033
 ### 6. Access the Application
 
 1. Open http://localhost:3033
-2. Register a new account
-3. Connect Source Google account (OAuth flow)
+2. Sign in with Google (registration happens automatically)
+3. Your Google account is automatically connected as the source account
 4. Connect Destination Google account (OAuth flow)
 5. Select calendars and create sync configuration
 6. Trigger manual sync and view detailed results
@@ -141,13 +165,15 @@ Frontend runs at http://localhost:3033
 
 ### Web Application
 
-1. **User Registration**
-   - Navigate to http://localhost:3033/register
-   - Create account with email/password
+1. **User Registration/Login**
+   - Navigate to http://localhost:3033/login
+   - Click "Sign in with Google" → Google OAuth flow
+   - Your Google account is automatically registered and connected as the source account
+   - JWT token is stored for subsequent API requests
 
-2. **Connect Google Accounts**
+2. **Connect Destination Google Account**
    - Dashboard shows OAuth status cards
-   - Click "Connect Source Account" → Google OAuth flow
+   - Source account is already connected (from registration)
    - Click "Connect Destination Account" → Google OAuth flow
    - Both accounts now show connected with email addresses
 
@@ -170,13 +196,11 @@ Frontend runs at http://localhost:3033
 Backend API documentation: http://localhost:8000/docs
 
 **Authentication:**
-- `POST /auth/register` - Register new user
-- `POST /auth/token` - Login and get JWT
 - `GET /auth/me` - Get current user
 
 **OAuth:**
-- `GET /oauth/start/{account_type}` - Initiate OAuth flow
-- `GET /oauth/callback` - OAuth callback handler
+- `GET /oauth/start/{account_type}` - Initiate OAuth flow (account_type: "register", "source", or "destination")
+- `GET /oauth/callback` - OAuth callback handler (creates user + source token for registration)
 - `GET /oauth/status` - Check connection status
 
 **Calendars:**
@@ -220,7 +244,6 @@ cal-sync/
 │   ├── src/
 │   │   ├── pages/
 │   │   │   ├── Login.tsx
-│   │   │   ├── Register.tsx
 │   │   │   └── Dashboard.tsx
 │   │   ├── components/
 │   │   │   ├── CalendarSelector.tsx    # Calendar dropdown
@@ -277,11 +300,11 @@ Enhanced event metadata for future 2-way sync:
 ### Completed (Story 2 - Web App)
 - ✅ Backend API with FastAPI
 - ✅ SQLAlchemy models and Alembic migrations
-- ✅ JWT authentication with user registration
+- ✅ Google OAuth-only authentication (no passwords)
 - ✅ Web OAuth flow (migrated from Desktop OOB)
 - ✅ OAuth token encryption (Fernet)
 - ✅ React + Material UI frontend
-- ✅ Login and registration pages
+- ✅ Google OAuth login page (registration happens automatically)
 - ✅ Dashboard with OAuth connection status
 - ✅ Refactored sync engine from CLI
 - ✅ Event mappings table (Story 3)
@@ -293,6 +316,8 @@ Enhanced event metadata for future 2-way sync:
 - ✅ Delete sync configurations
 - ✅ Real-time sync status feedback
 - ✅ Error handling and user notifications
+- ✅ Optimized test suite with parallel execution
+- ✅ Code cleanup and linting setup
 
 ### To Do (Story 1 - Terraform)
 - ⬜ Terraform modules for production deployment
@@ -309,9 +334,9 @@ Enhanced event metadata for future 2-way sync:
 - ⬜ Batch sync operations
 - ⬜ Sync configuration templates
 
-### Legacy CLI (Preserved)
+### Legacy CLI Files
 
-The original CLI scripts ([auth.py](auth.py), [sync.py](sync.py)) remain functional for backward compatibility. They use Desktop OAuth flow and filesystem token storage.
+The original CLI scripts in the root directory (`auth.py`, `sync.py`, `test_oauth.py`, `test_sync.py`) are legacy files from the original CLI version. They are preserved for reference but are not used by the web application. The web application uses the code in the `backend/` directory.
 
 ## What Gets Synced
 
@@ -332,3 +357,39 @@ The original CLI scripts ([auth.py](auth.py), [sync.py](sync.py)) remain functio
 - Future events only (configurable via `SYNC_LOOKAHEAD_DAYS`)
 - Manual execution (no automatic scheduling included)
 - Calendars must belong to different isolated Google accounts
+- Google OAuth-only authentication (no password recovery)
+
+## Development
+
+See [DEVELOPMENT.md](DEVELOPMENT.md) for detailed development guide.
+
+## Testing
+
+**Backend:**
+```bash
+docker-compose exec backend pytest -v
+docker-compose exec backend pytest -n auto  # Parallel execution
+```
+
+**Frontend:**
+```bash
+cd frontend && npm test -- --run
+```
+
+**All Tests:**
+```bash
+docker-compose exec backend pytest -v && cd frontend && npm test -- --run
+```
+
+See [backend/tests/README.md](backend/tests/README.md) for test suite details.
+
+## Contributing
+
+1. Create feature branch
+2. Make changes with tests
+3. Run tests and linters
+4. Submit pull request
+
+## License
+
+[Add your license here]

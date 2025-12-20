@@ -4,10 +4,11 @@ Pytest configuration and fixtures for backend tests.
 import pytest
 from typing import Generator
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, String, TypeDecorator, Text
+from sqlalchemy import create_engine, String, TypeDecorator, Text, event
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID, ARRAY as PG_ARRAY
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
+from sqlalchemy.engine import Engine
 import uuid
 import json
 
@@ -99,31 +100,57 @@ from app.main import app
 from app.database import Base, get_db
 from app.config import settings
 from app.models.user import User
-from app.core.security import get_password_hash
+from app.core.security import create_access_token
 
 # Use in-memory SQLite for tests
 SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
 
+# Create engine with connection pool
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL,
     connect_args={"check_same_thread": False},
     poolclass=StaticPool,
 )
+
+# Enable foreign key constraints for SQLite
+@event.listens_for(Engine, "connect")
+def set_sqlite_pragma(dbapi_conn, connection_record):
+    cursor = dbapi_conn.cursor()
+    cursor.execute("PRAGMA foreign_keys=ON")
+    cursor.close()
+
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
-@pytest.fixture(scope="function")
-def db() -> Generator:
+@pytest.fixture(scope="session")
+def db_engine():
     """
-    Create a fresh database for each test function.
+    Create database engine and tables once per test session.
+    This is the main optimization - tables are created once, not per test.
     """
     Base.metadata.create_all(bind=engine)
+    yield engine
+    # Cleanup after all tests
+    Base.metadata.drop_all(bind=engine)
+
+
+@pytest.fixture(scope="function")
+def db(db_engine) -> Generator:
+    """
+    Create a database session for each test with automatic cleanup.
+    Tables are session-scoped (created once), but data is cleared between tests.
+    """
     db_session = TestingSessionLocal()
     try:
         yield db_session
     finally:
+        # Clear all data between tests for isolation
+        # This is faster than dropping/recreating tables
+        # Delete in reverse order to respect foreign key constraints
+        for table in reversed(Base.metadata.sorted_tables):
+            db_session.execute(table.delete())
+        db_session.commit()
         db_session.close()
-        Base.metadata.drop_all(bind=engine)
 
 
 @pytest.fixture(scope="function")
@@ -146,12 +173,10 @@ def client(db) -> Generator:
 @pytest.fixture
 def test_user(db) -> User:
     """
-    Create a test user in the database.
-    Password: TestPassword123!
+    Create a test user in the database (no password required).
     """
     user = User(
         email="test@example.com",
-        hashed_password=get_password_hash("TestPassword123!"),
         full_name="Test User",
         is_active=True
     )
@@ -162,15 +187,11 @@ def test_user(db) -> User:
 
 
 @pytest.fixture
-def test_user_token(client, test_user) -> str:
+def test_user_token(test_user) -> str:
     """
-    Get an authentication token for the test user.
+    Generate an authentication token for the test user.
     """
-    response = client.post(
-        "/auth/token",
-        data={"username": test_user.email, "password": "TestPassword123!"},
-    )
-    return response.json()["access_token"]
+    return create_access_token(data={"sub": str(test_user.id)})
 
 
 @pytest.fixture
@@ -182,11 +203,12 @@ def auth_headers(test_user_token) -> dict:
 
 
 @pytest.fixture
-def mock_google_calendar_service(mocker):
+def mock_google_calendar_service():
     """
     Mock Google Calendar API service.
     """
-    mock_service = mocker.Mock()
+    from unittest.mock import Mock
+    mock_service = Mock()
     mock_service.events().list().execute.return_value = {
         "items": [],
         "nextPageToken": None
@@ -201,4 +223,51 @@ def mock_google_calendar_service(mocker):
     }
     mock_service.events().delete().execute.return_value = {}
 
+    return mock_service
+
+
+@pytest.fixture
+def mock_oauth_flow():
+    """
+    Shared fixture for mocking OAuth flow.
+    Returns a mock flow object with common setup.
+    """
+    from unittest.mock import Mock
+    mock_flow = Mock()
+    mock_flow.authorization_url.return_value = (
+        "https://accounts.google.com/o/oauth2/auth?state=test_state",
+        "test_state"
+    )
+    return mock_flow
+
+
+@pytest.fixture
+def mock_oauth_credentials():
+    """
+    Shared fixture for mocking OAuth credentials.
+    """
+    from unittest.mock import Mock
+    from datetime import datetime, timedelta
+    
+    mock_creds = Mock()
+    mock_creds.token = "test_access_token"
+    mock_creds.refresh_token = "test_refresh_token"
+    mock_creds.expiry = datetime.utcnow() + timedelta(hours=1)
+    mock_creds.scopes = ["https://www.googleapis.com/auth/calendar"]
+    return mock_creds
+
+
+@pytest.fixture
+def mock_google_calendar_api():
+    """
+    Shared fixture for mocking Google Calendar API service.
+    """
+    from unittest.mock import Mock
+    
+    mock_service = Mock()
+    mock_calendar_list = Mock()
+    mock_calendar_list.get.return_value.execute.return_value = {
+        "id": "test@example.com"
+    }
+    mock_service.calendarList.return_value = mock_calendar_list
     return mock_service

@@ -70,21 +70,16 @@ ENVIRONMENT=production
 DEBUG=false  # or omit this line
 ```
 
-## Password Requirements
+## Authentication
 
-Users must create passwords with:
-- Minimum 8 characters
-- At least one uppercase letter
-- At least one lowercase letter
-- At least one number
-- At least one special character
+**Google OAuth Only**: This application uses Google OAuth exclusively for authentication. No passwords are stored or required.
 
 ## Rate Limiting
 
-**⚠️ NOT CURRENTLY IMPLEMENTED** - Rate limiting should be added to prevent brute force attacks:
-- Recommended: Login endpoint (5 attempts per minute per IP)
-- Recommended: Registration endpoint (10 per hour per IP)
-- Recommended: OAuth endpoints (20 per hour per IP)
+**⚠️ NOT CURRENTLY IMPLEMENTED** - Rate limiting should be added to prevent abuse:
+- Recommended: OAuth registration endpoint (10 per hour per IP)
+- Recommended: OAuth connection endpoints (20 per hour per IP)
+- Recommended: API endpoints (100 per minute per IP)
 - Consider using: slowapi or fastapi-limiter libraries
 
 ## HTTPS
@@ -101,7 +96,8 @@ Users must create passwords with:
 - **⚠️ Access tokens currently stored in localStorage (vulnerable to XSS attacks)**
   - For production, consider migrating to HTTP-only cookies with CSRF protection
   - localStorage is convenient but less secure than HttpOnly cookies
-- OAuth refresh tokens encrypted in database with Fernet
+- Google OAuth tokens encrypted in database with Fernet before storage
+- OAuth refresh tokens automatically managed by Google OAuth library
 - **⚠️ CSRF protection NOT currently implemented**
   - Required if migrating to cookie-based authentication
 
@@ -149,10 +145,9 @@ To report security vulnerabilities:
 This is a development/personal project with the following known security limitations:
 
 1. **Token Storage**: JWT tokens stored in localStorage (vulnerable to XSS)
-2. **Rate Limiting**: Not implemented (vulnerable to brute force attacks)
+2. **Rate Limiting**: Not implemented (vulnerable to abuse)
 3. **CSRF Protection**: Not implemented (would be needed for cookie-based auth)
-4. **Password Reset**: Not implemented
-5. **Email Verification**: Not implemented
-6. **2FA/MFA**: Not implemented
+4. **Account Recovery**: Not implemented (users must re-register if access is lost)
+5. **Email Verification**: Not implemented (Google OAuth handles this)
 
 For production deployment, consider addressing these limitations based on your security requirements.

@@ -20,12 +20,11 @@ import {
   ListItemIcon,
   ListItemText,
 } from '@mui/material';
-import { CheckCircle, Cancel, ExitToApp, PlayArrow, Refresh, Delete, History, Circle, AccountCircle, LockOutlined } from '@mui/icons-material';
+import { CheckCircle, Cancel, ExitToApp, PlayArrow, Refresh, Delete, History, Circle, AccountCircle } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
 import { oauthAPI, OAuthStatus, SyncConfig, syncAPI } from '../services/api';
 import SyncConfigForm from '../components/SyncConfigForm';
 import SyncHistoryDialog from '../components/SyncHistoryDialog';
-import ChangePasswordDialog from '../components/ChangePasswordDialog';
 
 // Google Calendar color IDs and their corresponding colors
 const CALENDAR_COLORS: { [key: string]: { name: string; color: string } } = {
@@ -53,7 +52,6 @@ export default function Dashboard() {
   const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
   const [selectedConfigId, setSelectedConfigId] = useState<string | null>(null);
   const [userMenuAnchor, setUserMenuAnchor] = useState<null | HTMLElement>(null);
-  const [changePasswordOpen, setChangePasswordOpen] = useState(false);
 
   useEffect(() => {
     fetchOAuthStatus();
@@ -64,7 +62,8 @@ export default function Dashboard() {
     try {
       const response = await oauthAPI.getStatus();
       setOauthStatus(response.data);
-    } catch (err: any) {
+    } catch (err: unknown) {
+      console.error('Failed to fetch OAuth status:', err);
       setError('Failed to fetch OAuth status');
     } finally {
       setLoading(false);
@@ -75,7 +74,7 @@ export default function Dashboard() {
     try {
       const response = await syncAPI.listConfigs();
       setSyncConfigs(response.data);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to fetch sync configs:', err);
     }
   };
@@ -109,8 +108,9 @@ export default function Dashboard() {
       // Refresh the configs to get updated last_synced_at
       await fetchSyncConfigs();
       setSyncingConfigId(null);
-    } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to trigger sync');
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { detail?: string } } };
+      setError(error.response?.data?.detail || 'Failed to trigger sync');
       setSyncingConfigId(null);
     }
   };
@@ -127,8 +127,9 @@ export default function Dashboard() {
       setSuccess('Sync configuration deleted successfully!');
       // Refresh the configs list
       await fetchSyncConfigs();
-    } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to delete sync configuration');
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { detail?: string } } };
+      setError(error.response?.data?.detail || 'Failed to delete sync configuration');
     }
   };
 
@@ -141,7 +142,8 @@ export default function Dashboard() {
     try {
       const response = await oauthAPI.startOAuth(accountType);
       window.location.href = response.data.authorization_url;
-    } catch (err: any) {
+    } catch (err: unknown) {
+      console.error(`Failed to initiate OAuth for ${accountType} account:`, err);
       setError(`Failed to initiate OAuth for ${accountType} account`);
     }
   };
@@ -152,11 +154,6 @@ export default function Dashboard() {
 
   const handleUserMenuClose = () => {
     setUserMenuAnchor(null);
-  };
-
-  const handleChangePasswordClick = () => {
-    handleUserMenuClose();
-    setChangePasswordOpen(true);
   };
 
   const handleLogoutClick = () => {
@@ -194,12 +191,6 @@ export default function Dashboard() {
               horizontal: 'right',
             }}
           >
-            <MenuItem onClick={handleChangePasswordClick}>
-              <ListItemIcon>
-                <LockOutlined fontSize="small" />
-              </ListItemIcon>
-              <ListItemText>Change Password</ListItemText>
-            </MenuItem>
             <MenuItem onClick={handleLogoutClick}>
               <ListItemIcon>
                 <ExitToApp fontSize="small" />
@@ -436,12 +427,6 @@ export default function Dashboard() {
           configId={selectedConfigId}
         />
       )}
-
-      {/* Change Password Dialog */}
-      <ChangePasswordDialog
-        open={changePasswordOpen}
-        onClose={() => setChangePasswordOpen(false)}
-      />
     </>
   );
 }

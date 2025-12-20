@@ -3,10 +3,11 @@ Integration tests for OAuth API endpoints.
 """
 import pytest
 from fastapi import status
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch
 from datetime import datetime, timedelta
 from app.models.oauth_token import OAuthToken
 from app.core.security import encrypt_token
+from tests.test_utils import assert_response_success, assert_response_error
 
 
 @pytest.mark.integration
@@ -15,45 +16,44 @@ class TestStartOAuth:
     """Test OAuth initiation endpoint."""
 
     @patch('app.api.oauth.create_flow')
-    def test_start_oauth_for_source_account(self, mock_create_flow, client, auth_headers):
+    def test_start_oauth_for_source_account(self, mock_create_flow, client, auth_headers, mock_oauth_flow):
         """Test starting OAuth flow for source account."""
-        # Mock OAuth flow
-        mock_flow = Mock()
-        mock_flow.authorization_url.return_value = (
-            "https://accounts.google.com/o/oauth2/auth?state=test_state",
-            "test_state"
-        )
-        mock_create_flow.return_value = mock_flow
+        mock_create_flow.return_value = mock_oauth_flow
 
         response = client.get("/oauth/start/source", headers=auth_headers)
 
-        assert response.status_code == status.HTTP_200_OK
+        assert_response_success(response)
         data = response.json()
         assert "authorization_url" in data
         assert "accounts.google.com" in data["authorization_url"]
         assert "state=" in data["authorization_url"]
 
     @patch('app.api.oauth.create_flow')
-    def test_start_oauth_for_destination_account(self, mock_create_flow, client, auth_headers):
+    def test_start_oauth_for_destination_account(self, mock_create_flow, client, auth_headers, mock_oauth_flow):
         """Test starting OAuth flow for destination account."""
-        mock_flow = Mock()
-        mock_flow.authorization_url.return_value = (
-            "https://accounts.google.com/o/oauth2/auth?state=test_state",
-            "test_state"
-        )
-        mock_create_flow.return_value = mock_flow
+        mock_create_flow.return_value = mock_oauth_flow
 
         response = client.get("/oauth/start/destination", headers=auth_headers)
 
-        assert response.status_code == status.HTTP_200_OK
+        assert_response_success(response)
         data = response.json()
         assert "authorization_url" in data
 
     def test_start_oauth_requires_authentication(self, client):
-        """Test OAuth start requires authentication."""
+        """Test OAuth start requires authentication for source/destination."""
         response = client.get("/oauth/start/source")
+        assert_response_error(response, status.HTTP_401_UNAUTHORIZED)
 
-        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+    @patch('app.api.oauth.create_flow')
+    def test_start_oauth_register_no_auth_required(self, mock_create_flow, client, mock_oauth_flow):
+        """Test OAuth registration doesn't require authentication."""
+        mock_create_flow.return_value = mock_oauth_flow
+
+        response = client.get("/oauth/start/register")
+
+        assert_response_success(response)
+        data = response.json()
+        assert "authorization_url" in data
 
     @patch('app.api.oauth.create_flow')
     def test_start_oauth_invalid_account_type(self, mock_create_flow, client, auth_headers):
@@ -71,7 +71,10 @@ class TestOAuthCallback:
     @patch('googleapiclient.discovery.build')
     @patch('app.api.oauth.create_flow')
     @patch('app.api.oauth.oauth_states')
-    def test_oauth_callback_creates_new_token(self, mock_states, mock_create_flow, mock_build, client, db, test_user):
+    def test_oauth_callback_creates_new_token(
+        self, mock_states, mock_create_flow, mock_build, 
+        client, db, test_user, mock_oauth_credentials, mock_google_calendar_api
+    ):
         """Test OAuth callback creates new token record."""
         # Setup state
         state_token = "test_state_123"
@@ -86,22 +89,11 @@ class TestOAuthCallback:
 
         # Mock OAuth flow
         mock_flow = Mock()
-        mock_creds = Mock()
-        mock_creds.token = "test_access_token"
-        mock_creds.refresh_token = "test_refresh_token"
-        mock_creds.expiry = datetime.utcnow() + timedelta(hours=1)
-        mock_creds.scopes = ["https://www.googleapis.com/auth/calendar"]
-        mock_flow.credentials = mock_creds
+        mock_flow.credentials = mock_oauth_credentials
         mock_create_flow.return_value = mock_flow
 
         # Mock Google Calendar API
-        mock_service = Mock()
-        mock_calendar_list = Mock()
-        mock_calendar_list.get.return_value.execute.return_value = {
-            "id": "test@example.com"
-        }
-        mock_service.calendarList.return_value = mock_calendar_list
-        mock_build.return_value = mock_service
+        mock_build.return_value = mock_google_calendar_api
 
         response = client.get(
             f"/oauth/callback?code=test_code&state={state_token}",
@@ -125,7 +117,10 @@ class TestOAuthCallback:
     @patch('googleapiclient.discovery.build')
     @patch('app.api.oauth.create_flow')
     @patch('app.api.oauth.oauth_states')
-    def test_oauth_callback_updates_existing_token(self, mock_states, mock_create_flow, mock_build, client, db, test_user):
+    def test_oauth_callback_updates_existing_token(
+        self, mock_states, mock_create_flow, mock_build, 
+        client, db, test_user, mock_oauth_credentials, mock_google_calendar_api
+    ):
         """Test OAuth callback updates existing token record."""
         # Create existing token
         existing_token = OAuthToken(
@@ -148,22 +143,16 @@ class TestOAuthCallback:
 
         # Mock OAuth flow
         mock_flow = Mock()
-        mock_creds = Mock()
-        mock_creds.token = "new_access_token"
-        mock_creds.refresh_token = "new_refresh_token"
-        mock_creds.expiry = datetime.utcnow() + timedelta(hours=1)
-        mock_creds.scopes = ["https://www.googleapis.com/auth/calendar"]
-        mock_flow.credentials = mock_creds
+        mock_oauth_credentials.token = "new_access_token"
+        mock_oauth_credentials.refresh_token = "new_refresh_token"
+        mock_flow.credentials = mock_oauth_credentials
         mock_create_flow.return_value = mock_flow
 
-        # Mock Google Calendar API
-        mock_service = Mock()
-        mock_calendar_list = Mock()
-        mock_calendar_list.get.return_value.execute.return_value = {
+        # Mock Google Calendar API with different email
+        mock_google_calendar_api.calendarList().get().execute.return_value = {
             "id": "new@example.com"
         }
-        mock_service.calendarList.return_value = mock_calendar_list
-        mock_build.return_value = mock_service
+        mock_build.return_value = mock_google_calendar_api
 
         response = client.get(
             f"/oauth/callback?code=new_code&state={state_token}",
@@ -324,3 +313,106 @@ class TestGetCredentialsFromDB:
         assert creds is not None
         assert creds.token == "test_access"
         assert creds.refresh_token is None
+
+
+@pytest.mark.integration
+@pytest.mark.oauth
+class TestOAuthRegistration:
+    """Test OAuth registration flow."""
+
+    @patch('googleapiclient.discovery.build')
+    @patch('app.api.oauth.create_flow')
+    @patch('app.api.oauth.oauth_states')
+    def test_oauth_registration_creates_user_and_source_token(
+        self, mock_states, mock_create_flow, mock_build, 
+        client, db, mock_oauth_credentials, mock_google_calendar_api
+    ):
+        """Test OAuth registration creates new user and source OAuth token."""
+        from app.models.user import User
+        
+        # Setup state for registration
+        state_token = "test_registration_state"
+        mock_states.pop = Mock(return_value={
+            "account_type": "register",
+        })
+
+        # Mock OAuth flow
+        mock_flow = Mock()
+        mock_flow.credentials = mock_oauth_credentials
+        mock_create_flow.return_value = mock_flow
+
+        # Mock Google Calendar API with new user email
+        mock_google_calendar_api.calendarList().get().execute.return_value = {
+            "id": "newuser@example.com"
+        }
+        mock_build.return_value = mock_google_calendar_api
+
+        # Verify user doesn't exist
+        existing_user = db.query(User).filter(User.email == "newuser@example.com").first()
+        assert existing_user is None
+
+        response = client.get(
+            f"/oauth/callback?code=test_code&state={state_token}",
+            follow_redirects=False
+        )
+
+        # Should redirect to frontend with token
+        assert response.status_code == status.HTTP_307_TEMPORARY_REDIRECT
+        assert "dashboard?token=" in response.headers["location"]
+
+        # Verify user was created
+        user = db.query(User).filter(User.email == "newuser@example.com").first()
+        assert user is not None
+        assert user.is_active is True
+
+        # Verify source token was created
+        token = db.query(OAuthToken).filter(
+            OAuthToken.user_id == user.id,
+            OAuthToken.account_type == "source"
+        ).first()
+        assert token is not None
+        assert token.google_email == "newuser@example.com"
+
+    @patch('googleapiclient.discovery.build')
+    @patch('app.api.oauth.create_flow')
+    @patch('app.api.oauth.oauth_states')
+    def test_oauth_registration_existing_user_updates_source_token(
+        self, mock_states, mock_create_flow, mock_build, 
+        client, db, test_user, mock_oauth_credentials, mock_google_calendar_api
+    ):
+        """Test OAuth registration with existing user updates source token."""
+        # Setup state for registration
+        state_token = "test_registration_state_existing"
+        mock_states.pop = Mock(return_value={
+            "account_type": "register",
+        })
+
+        # Mock OAuth flow
+        mock_flow = Mock()
+        mock_oauth_credentials.token = "new_access_token"
+        mock_oauth_credentials.refresh_token = "new_refresh_token"
+        mock_flow.credentials = mock_oauth_credentials
+        mock_create_flow.return_value = mock_flow
+
+        # Mock Google Calendar API (return test_user email)
+        mock_google_calendar_api.calendarList().get().execute.return_value = {
+            "id": test_user.email
+        }
+        mock_build.return_value = mock_google_calendar_api
+
+        response = client.get(
+            f"/oauth/callback?code=test_code&state={state_token}",
+            follow_redirects=False
+        )
+
+        # Should redirect to frontend with token
+        assert response.status_code == status.HTTP_307_TEMPORARY_REDIRECT
+        assert "dashboard?token=" in response.headers["location"]
+
+        # Verify source token was created/updated
+        token = db.query(OAuthToken).filter(
+            OAuthToken.user_id == test_user.id,
+            OAuthToken.account_type == "source"
+        ).first()
+        assert token is not None
+        assert token.google_email == test_user.email

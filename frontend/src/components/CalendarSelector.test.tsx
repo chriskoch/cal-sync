@@ -63,7 +63,7 @@ describe('CalendarSelector', () => {
     // Check that calendars are displayed
     expect(screen.getByText('Personal Calendar')).toBeInTheDocument()
     expect(screen.getByText('Work Calendar')).toBeInTheDocument()
-    expect(screen.getByText('Primary Calendar')).toBeInTheDocument()
+    // Note: "Primary Calendar" is shown as a caption, not as separate text
   })
 
   it('calls onChange when a calendar is selected', async () => {
@@ -85,8 +85,8 @@ describe('CalendarSelector', () => {
     const calendarOption = screen.getByText('Personal Calendar')
     await userEvent.click(calendarOption)
 
-    // Verify onChange was called with correct calendar ID
-    expect(mockOnChange).toHaveBeenCalledWith(mockCalendars[0].id)
+    // Verify onChange was called with correct calendar ID and calendar object
+    expect(mockOnChange).toHaveBeenCalledWith(mockCalendars[0].id, mockCalendars[0])
   })
 
   it('fetches destination calendars when accountType is destination', async () => {

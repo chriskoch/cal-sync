@@ -1,55 +1,14 @@
 """
-Unit tests for security functions (password hashing, JWT, encryption).
+Unit tests for security functions (JWT, encryption).
 """
 import pytest
 from datetime import timedelta
 from app.core.security import (
-    verify_password,
-    get_password_hash,
     create_access_token,
     decode_access_token,
     encrypt_token,
     decrypt_token,
 )
-
-
-@pytest.mark.unit
-class TestPasswordHashing:
-    """Test password hashing and verification."""
-
-    def test_hash_password(self):
-        """Test that password hashing works."""
-        password = "testpassword123"
-        hashed = get_password_hash(password)
-
-        assert hashed != password
-        assert isinstance(hashed, str)
-        assert len(hashed) > 0
-
-    def test_verify_password_correct(self):
-        """Test that correct password verification works."""
-        password = "testpassword123"
-        hashed = get_password_hash(password)
-
-        assert verify_password(password, hashed) is True
-
-    def test_verify_password_incorrect(self):
-        """Test that incorrect password verification fails."""
-        password = "testpassword123"
-        wrong_password = "wrongpassword"
-        hashed = get_password_hash(password)
-
-        assert verify_password(wrong_password, hashed) is False
-
-    def test_different_hashes_for_same_password(self):
-        """Test that same password produces different hashes (salt)."""
-        password = "testpassword123"
-        hash1 = get_password_hash(password)
-        hash2 = get_password_hash(password)
-
-        assert hash1 != hash2
-        assert verify_password(password, hash1) is True
-        assert verify_password(password, hash2) is True
 
 
 @pytest.mark.unit

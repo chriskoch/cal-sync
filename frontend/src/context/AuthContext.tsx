@@ -4,8 +4,6 @@ import { authAPI, User } from '../services/api';
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  login: (username: string, password: string) => Promise<void>;
-  register: (email: string, password: string, fullName: string | undefined) => Promise<void>;
   logout: () => void;
   isAuthenticated: boolean;
 }
@@ -48,20 +46,31 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
   }, []);
 
-  const login = async (username: string, password: string) => {
-    const response = await authAPI.login(username, password);
-    localStorage.setItem('access_token', response.data.access_token);
-
-    // Fetch user info
-    const userResponse = await authAPI.getCurrentUser();
-    setUser(userResponse.data);
+  // Refresh user data (called after OAuth login)
+  const refreshUser = async () => {
+    const token = localStorage.getItem('access_token');
+    if (token) {
+      try {
+        const response = await authAPI.getCurrentUser();
+        setUser(response.data);
+      } catch {
+        localStorage.removeItem('access_token');
+        setUser(null);
+      }
+    }
   };
 
-  const register = async (email: string, password: string, fullName: string | undefined) => {
-    await authAPI.register(email, password, fullName);
-    // Auto-login after registration
-    await login(email, password);
-  };
+  // Check for token in URL (from OAuth callback)
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const token = urlParams.get('token');
+    if (token) {
+      localStorage.setItem('access_token', token);
+      // Remove token from URL
+      window.history.replaceState({}, '', window.location.pathname);
+      refreshUser();
+    }
+  }, []);
 
   const logout = () => {
     localStorage.removeItem('access_token');
@@ -74,8 +83,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       value={{
         user,
         loading,
-        login,
-        register,
         logout,
         isAuthenticated: !!user,
       }}

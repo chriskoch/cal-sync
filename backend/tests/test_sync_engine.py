@@ -14,6 +14,7 @@ from app.core.sync_engine import (
     SyncEngine,
 )
 from app.models.event_mapping import EventMapping
+from app.models.sync_config import SyncConfig
 
 
 @pytest.mark.unit
@@ -345,9 +346,19 @@ class TestSyncEngine:
         mock_src_creds = Mock()
         mock_dst_creds = Mock()
 
+        # Create sync config first (required for foreign key)
+        sync_config = SyncConfig(
+            user_id=test_user.id,
+            source_calendar_id="src@example.com",
+            dest_calendar_id="dst@example.com",
+            sync_lookahead_days=90,
+        )
+        db.add(sync_config)
+        db.commit()
+        sync_config_id = str(sync_config.id)
+
         # Run sync
         engine = SyncEngine(db)
-        sync_config_id = str(uuid.uuid4())
         result = engine.sync_calendars(
             sync_config_id=sync_config_id,
             source_creds=mock_src_creds,
@@ -466,10 +477,25 @@ class TestSyncEngine:
         # Mock delete
         mock_dst_service.events.return_value.delete.return_value.execute.return_value = {}
 
+        # Create sync config first (required for foreign key)
+        from app.models.user import User
+        test_user = User(email="test@example.com", is_active=True)
+        db.add(test_user)
+        db.flush()
+        
+        sync_config = SyncConfig(
+            user_id=test_user.id,
+            source_calendar_id="src@example.com",
+            dest_calendar_id="dst@example.com",
+            sync_lookahead_days=90,
+        )
+        db.add(sync_config)
+        db.flush()
+        sync_config_id = str(sync_config.id)
+
         # Create existing event mapping
-        sync_config_id = str(uuid.uuid4())
         existing_mapping = EventMapping(
-            sync_config_id=sync_config_id,
+            sync_config_id=sync_config.id,
             source_event_id="src_event_1",
             dest_event_id="dest_event_1",
             sync_cluster_id=uuid.uuid4(),
@@ -615,8 +641,23 @@ class TestSyncEngine:
             "updated": "2024-01-15T10:30:00Z",
         }
 
+        # Create sync config first (required for foreign key)
+        from app.models.user import User
+        test_user = User(email="test@example.com", is_active=True)
+        db.add(test_user)
+        db.flush()
+        
+        sync_config = SyncConfig(
+            user_id=test_user.id,
+            source_calendar_id="src@example.com",
+            dest_calendar_id="dst@example.com",
+            sync_lookahead_days=90,
+        )
+        db.add(sync_config)
+        db.commit()
+        sync_config_id = str(sync_config.id)
+
         # Run sync
-        sync_config_id = str(uuid.uuid4())
         engine = SyncEngine(db)
         result = engine.sync_calendars(
             sync_config_id=sync_config_id,
