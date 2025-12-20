@@ -14,12 +14,18 @@ import {
   Toolbar,
   Chip,
   Divider,
+  IconButton,
+  Menu,
+  MenuItem,
+  ListItemIcon,
+  ListItemText,
 } from '@mui/material';
-import { CheckCircle, Cancel, ExitToApp, PlayArrow, Refresh, Delete, History, Circle } from '@mui/icons-material';
+import { CheckCircle, Cancel, ExitToApp, PlayArrow, Refresh, Delete, History, Circle, AccountCircle, LockOutlined } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
 import { oauthAPI, OAuthStatus, SyncConfig, syncAPI } from '../services/api';
 import SyncConfigForm from '../components/SyncConfigForm';
 import SyncHistoryDialog from '../components/SyncHistoryDialog';
+import ChangePasswordDialog from '../components/ChangePasswordDialog';
 
 // Google Calendar color IDs and their corresponding colors
 const CALENDAR_COLORS: { [key: string]: { name: string; color: string } } = {
@@ -46,6 +52,8 @@ export default function Dashboard() {
   const [syncingConfigId, setSyncingConfigId] = useState<string | null>(null);
   const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
   const [selectedConfigId, setSelectedConfigId] = useState<string | null>(null);
+  const [userMenuAnchor, setUserMenuAnchor] = useState<null | HTMLElement>(null);
+  const [changePasswordOpen, setChangePasswordOpen] = useState(false);
 
   useEffect(() => {
     fetchOAuthStatus();
@@ -138,6 +146,24 @@ export default function Dashboard() {
     }
   };
 
+  const handleUserMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+    setUserMenuAnchor(event.currentTarget);
+  };
+
+  const handleUserMenuClose = () => {
+    setUserMenuAnchor(null);
+  };
+
+  const handleChangePasswordClick = () => {
+    handleUserMenuClose();
+    setChangePasswordOpen(true);
+  };
+
+  const handleLogoutClick = () => {
+    handleUserMenuClose();
+    logout();
+  };
+
   return (
     <>
       <AppBar position="static">
@@ -148,9 +174,39 @@ export default function Dashboard() {
           <Typography variant="body1" sx={{ mr: 2 }}>
             {user?.email}
           </Typography>
-          <Button color="inherit" onClick={logout} startIcon={<ExitToApp />}>
-            Logout
-          </Button>
+          <IconButton
+            color="inherit"
+            onClick={handleUserMenuOpen}
+            aria-label="user menu"
+          >
+            <AccountCircle />
+          </IconButton>
+          <Menu
+            anchorEl={userMenuAnchor}
+            open={Boolean(userMenuAnchor)}
+            onClose={handleUserMenuClose}
+            anchorOrigin={{
+              vertical: 'bottom',
+              horizontal: 'right',
+            }}
+            transformOrigin={{
+              vertical: 'top',
+              horizontal: 'right',
+            }}
+          >
+            <MenuItem onClick={handleChangePasswordClick}>
+              <ListItemIcon>
+                <LockOutlined fontSize="small" />
+              </ListItemIcon>
+              <ListItemText>Change Password</ListItemText>
+            </MenuItem>
+            <MenuItem onClick={handleLogoutClick}>
+              <ListItemIcon>
+                <ExitToApp fontSize="small" />
+              </ListItemIcon>
+              <ListItemText>Logout</ListItemText>
+            </MenuItem>
+          </Menu>
         </Toolbar>
       </AppBar>
 
@@ -380,6 +436,12 @@ export default function Dashboard() {
           configId={selectedConfigId}
         />
       )}
+
+      {/* Change Password Dialog */}
+      <ChangePasswordDialog
+        open={changePasswordOpen}
+        onClose={() => setChangePasswordOpen(false)}
+      />
     </>
   );
 }
