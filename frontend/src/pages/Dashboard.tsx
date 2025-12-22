@@ -20,7 +20,7 @@ import {
   ListItemIcon,
   ListItemText,
 } from '@mui/material';
-import { CheckCircle, Cancel, ExitToApp, PlayArrow, Refresh, Delete, History, Circle, AccountCircle } from '@mui/icons-material';
+import { CheckCircle, Cancel, ExitToApp, PlayArrow, Refresh, Delete, History, Circle, AccountCircle, Lock, SwapHoriz } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
 import { oauthAPI, OAuthStatus, SyncConfig, syncAPI } from '../services/api';
 import SyncConfigForm from '../components/SyncConfigForm';
@@ -79,12 +79,12 @@ export default function Dashboard() {
     }
   };
 
-  const handleTriggerSync = async (configId: string) => {
+  const handleTriggerSync = async (configId: string, triggerBothDirections = false) => {
     try {
       setSyncingConfigId(configId);
       setError('');
       setSuccess('');
-      await syncAPI.triggerSync(configId);
+      await syncAPI.triggerSync(configId, triggerBothDirections);
 
       // Wait a moment for the background task to complete
       await new Promise(resolve => setTimeout(resolve, 2000));
@@ -160,6 +160,46 @@ export default function Dashboard() {
     handleUserMenuClose();
     logout();
   };
+
+  const handleDeleteBidirectionalPair = async (forwardConfigId: string, reverseConfigId: string) => {
+    if (!window.confirm('Are you sure you want to delete this bi-directional sync pair? This will delete both directions. This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      setError('');
+      setSuccess('');
+      // Delete both configs
+      await syncAPI.deleteConfig(forwardConfigId);
+      await syncAPI.deleteConfig(reverseConfigId);
+      setSuccess('Bi-directional sync configuration deleted successfully!');
+      // Refresh the configs list
+      await fetchSyncConfigs();
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { detail?: string } } };
+      setError(error.response?.data?.detail || 'Failed to delete sync configuration');
+    }
+  };
+
+  // Group configs into one-way and bidirectional
+  const groupedConfigs = syncConfigs.reduce<{
+    oneWay: SyncConfig[];
+    bidirectional: { [key: string]: SyncConfig[] };
+  }>(
+    (acc, config) => {
+      if (config.sync_direction.startsWith('bidirectional_')) {
+        const pairId = config.paired_config_id || config.id;
+        if (!acc.bidirectional[pairId]) {
+          acc.bidirectional[pairId] = [];
+        }
+        acc.bidirectional[pairId].push(config);
+      } else {
+        acc.oneWay.push(config);
+      }
+      return acc;
+    },
+    { oneWay: [], bidirectional: {} }
+  );
 
   return (
     <>
@@ -326,7 +366,120 @@ export default function Dashboard() {
                   </Box>
                   <Divider sx={{ mb: 2 }} />
                   <Grid container spacing={2}>
-                    {syncConfigs.map((config) => (
+                    {/* Bi-directional configs */}
+                    {Object.entries(groupedConfigs.bidirectional).map(([pairId, configs]) => {
+                      const forwardConfig = configs.find(c => c.sync_direction === 'bidirectional_a_to_b');
+                      const reverseConfig = configs.find(c => c.sync_direction === 'bidirectional_b_to_a');
+
+                      if (!forwardConfig) return null;
+
+                      return (
+                        <Grid item xs={12} key={pairId}>
+                          <Card variant="outlined" sx={{ borderColor: 'primary.main', borderWidth: 2 }}>
+                            <CardContent>
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                                <SwapHoriz color="primary" />
+                                <Typography variant="h6">Bi-Directional Sync</Typography>
+                                <Chip label="↔" color="primary" size="small" />
+                              </Box>
+
+                              {/* Forward direction */}
+                              <Box sx={{ mb: 2, pl: 2, borderLeft: '3px solid', borderColor: 'primary.main' }}>
+                                <Typography variant="subtitle2" color="primary" gutterBottom>
+                                  Forward: {forwardConfig.source_calendar_id} → {forwardConfig.dest_calendar_id}
+                                </Typography>
+                                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 1 }}>
+                                  {forwardConfig.destination_color_id && CALENDAR_COLORS[forwardConfig.destination_color_id] && (
+                                    <Chip
+                                      icon={<Circle sx={{ color: `${CALENDAR_COLORS[forwardConfig.destination_color_id].color} !important` }} />}
+                                      label={CALENDAR_COLORS[forwardConfig.destination_color_id].name}
+                                      size="small"
+                                      variant="outlined"
+                                    />
+                                  )}
+                                  {forwardConfig.privacy_mode_enabled && (
+                                    <Chip
+                                      label={`Privacy: "${forwardConfig.privacy_placeholder_text}"`}
+                                      size="small"
+                                      icon={<Lock />}
+                                      color="secondary"
+                                    />
+                                  )}
+                                </Box>
+                              </Box>
+
+                              {/* Reverse direction */}
+                              {reverseConfig && (
+                                <Box sx={{ pl: 2, borderLeft: '3px solid', borderColor: 'secondary.main' }}>
+                                  <Typography variant="subtitle2" color="secondary" gutterBottom>
+                                    Reverse: {reverseConfig.source_calendar_id} → {reverseConfig.dest_calendar_id}
+                                  </Typography>
+                                  <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 1 }}>
+                                    {reverseConfig.destination_color_id && CALENDAR_COLORS[reverseConfig.destination_color_id] && (
+                                      <Chip
+                                        icon={<Circle sx={{ color: `${CALENDAR_COLORS[reverseConfig.destination_color_id].color} !important` }} />}
+                                        label={CALENDAR_COLORS[reverseConfig.destination_color_id].name}
+                                        size="small"
+                                        variant="outlined"
+                                      />
+                                    )}
+                                    {reverseConfig.privacy_mode_enabled && (
+                                      <Chip
+                                        label={`Privacy: "${reverseConfig.privacy_placeholder_text}"`}
+                                        size="small"
+                                        icon={<Lock />}
+                                        color="secondary"
+                                      />
+                                    )}
+                                  </Box>
+                                </Box>
+                              )}
+
+                              <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+                                Sync Lookahead: <strong>{forwardConfig.sync_lookahead_days} days</strong>
+                              </Typography>
+                              {forwardConfig.last_synced_at && (
+                                <Typography variant="body2" color="text.secondary">
+                                  Last Synced: <strong>{new Date(forwardConfig.last_synced_at).toLocaleString()}</strong>
+                                </Typography>
+                              )}
+                            </CardContent>
+                            <CardActions sx={{ justifyContent: 'space-between', flexWrap: 'wrap', gap: 1 }}>
+                              <Box sx={{ display: 'flex', gap: 1 }}>
+                                <Button
+                                  variant="contained"
+                                  startIcon={<PlayArrow />}
+                                  onClick={() => handleTriggerSync(forwardConfig.id, true)}
+                                  disabled={syncingConfigId === forwardConfig.id}
+                                >
+                                  {syncingConfigId === forwardConfig.id ? 'Syncing...' : 'Sync Both Directions'}
+                                </Button>
+                                <Button
+                                  variant="outlined"
+                                  startIcon={<History />}
+                                  onClick={() => handleViewHistory(forwardConfig.id)}
+                                >
+                                  View History
+                                </Button>
+                              </Box>
+                              <Button
+                                variant="outlined"
+                                color="error"
+                                startIcon={<Delete />}
+                                onClick={() =>
+                                  handleDeleteBidirectionalPair(forwardConfig.id, reverseConfig?.id || '')
+                                }
+                              >
+                                Delete Pair
+                              </Button>
+                            </CardActions>
+                          </Card>
+                        </Grid>
+                      );
+                    })}
+
+                    {/* One-way configs */}
+                    {groupedConfigs.oneWay.map((config) => (
                       <Grid item xs={12} key={config.id}>
                         <Card variant="outlined">
                           <CardContent>
@@ -344,19 +497,26 @@ export default function Dashboard() {
                                 <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
                                   Sync Lookahead: <strong>{config.sync_lookahead_days} days</strong>
                                 </Typography>
-                                {config.destination_color_id && CALENDAR_COLORS[config.destination_color_id] && (
-                                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 1 }}>
-                                    <Typography variant="body2" color="text.secondary">
-                                      Destination Color:
-                                    </Typography>
-                                    <Circle sx={{ color: CALENDAR_COLORS[config.destination_color_id].color, fontSize: 16 }} />
-                                    <Typography variant="body2" color="text.secondary">
-                                      <strong>{CALENDAR_COLORS[config.destination_color_id].name}</strong>
-                                    </Typography>
-                                  </Box>
-                                )}
+                                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 1 }}>
+                                  {config.destination_color_id && CALENDAR_COLORS[config.destination_color_id] && (
+                                    <Chip
+                                      icon={<Circle sx={{ color: `${CALENDAR_COLORS[config.destination_color_id].color} !important` }} />}
+                                      label={CALENDAR_COLORS[config.destination_color_id].name}
+                                      size="small"
+                                      variant="outlined"
+                                    />
+                                  )}
+                                  {config.privacy_mode_enabled && (
+                                    <Chip
+                                      label={`Privacy: "${config.privacy_placeholder_text}"`}
+                                      size="small"
+                                      icon={<Lock />}
+                                      color="secondary"
+                                    />
+                                  )}
+                                </Box>
                                 {config.last_synced_at && (
-                                  <Typography variant="body2" color="text.secondary">
+                                  <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
                                     Last Synced: <strong>{new Date(config.last_synced_at).toLocaleString()}</strong>
                                   </Typography>
                                 )}

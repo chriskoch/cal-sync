@@ -23,6 +23,14 @@ class SyncConfig(Base):
     sync_lookahead_days = Column(Integer, default=90, nullable=False)
     destination_color_id = Column(String(50), nullable=True)  # Google Calendar color ID for destination events
 
+    # Bi-directional sync settings
+    sync_direction = Column(String(20), default="one_way", nullable=False)  # 'one_way', 'bidirectional_a_to_b', 'bidirectional_b_to_a'
+    paired_config_id = Column(UUID(as_uuid=True), ForeignKey("sync_configs.id", ondelete="SET NULL"), nullable=True)  # Links to paired config
+
+    # Privacy mode settings
+    privacy_mode_enabled = Column(Boolean, default=False, nullable=False)
+    privacy_placeholder_text = Column(String(255), default="Personal appointment", nullable=True)
+
     # Last sync timestamp
     last_synced_at = Column(DateTime(timezone=True))
 

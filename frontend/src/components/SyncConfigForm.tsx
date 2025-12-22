@@ -12,6 +12,9 @@ import {
   InputLabel,
   Select,
   MenuItem,
+  Switch,
+  FormControlLabel,
+  Chip,
 } from '@mui/material';
 import { PlayArrow, Circle } from '@mui/icons-material';
 import CalendarSelector from './CalendarSelector';
@@ -45,6 +48,17 @@ export default function SyncConfigForm({ onConfigCreated }: SyncConfigFormProps)
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
+  // Bi-directional sync settings
+  const [enableBidirectional, setEnableBidirectional] = useState(false);
+
+  // Privacy mode settings (forward direction A→B)
+  const [privacyModeEnabled, setPrivacyModeEnabled] = useState(false);
+  const [privacyPlaceholderText, setPrivacyPlaceholderText] = useState('Personal appointment');
+
+  // Privacy mode settings (reverse direction B→A)
+  const [reversePrivacyModeEnabled, setReversePrivacyModeEnabled] = useState(false);
+  const [reversePrivacyPlaceholderText, setReversePrivacyPlaceholderText] = useState('Personal appointment');
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -63,14 +77,24 @@ export default function SyncConfigForm({ onConfigCreated }: SyncConfigFormProps)
       setError('');
       setSuccess('');
 
-      const response = await syncAPI.createConfig(
-        sourceCalendarId,
-        destCalendarId,
-        syncLookaheadDays,
-        destinationColorId || undefined
-      );
+      const response = await syncAPI.createConfig({
+        source_calendar_id: sourceCalendarId,
+        dest_calendar_id: destCalendarId,
+        sync_lookahead_days: syncLookaheadDays,
+        destination_color_id: destinationColorId || undefined,
+        enable_bidirectional: enableBidirectional,
+        privacy_mode_enabled: privacyModeEnabled,
+        privacy_placeholder_text: privacyModeEnabled ? privacyPlaceholderText : undefined,
+        reverse_privacy_mode_enabled: enableBidirectional ? reversePrivacyModeEnabled : undefined,
+        reverse_privacy_placeholder_text:
+          enableBidirectional && reversePrivacyModeEnabled ? reversePrivacyPlaceholderText : undefined,
+      });
 
-      setSuccess('Sync configuration created successfully!');
+      setSuccess(
+        enableBidirectional
+          ? 'Bi-directional sync configuration created successfully!'
+          : 'Sync configuration created successfully!'
+      );
       if (onConfigCreated) {
         onConfigCreated(response.data);
       }
@@ -175,6 +199,100 @@ export default function SyncConfigForm({ onConfigCreated }: SyncConfigFormProps)
               </Select>
             </FormControl>
           </Grid>
+
+          <Grid item xs={12}>
+            <Divider sx={{ my: 2 }} />
+          </Grid>
+
+          {/* Bi-directional sync toggle */}
+          <Grid item xs={12}>
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={enableBidirectional}
+                  onChange={(e) => setEnableBidirectional(e.target.checked)}
+                />
+              }
+              label="Enable Bi-Directional Sync"
+            />
+            <Typography variant="body2" color="text.secondary" sx={{ ml: 4 }}>
+              When enabled, events will sync in both directions (A ↔ B)
+            </Typography>
+          </Grid>
+
+          {/* Privacy settings section */}
+          <Grid item xs={12}>
+            <Divider sx={{ my: 2 }}>
+              <Chip label="Privacy Settings" />
+            </Divider>
+          </Grid>
+
+          {/* Forward direction privacy (A→B) */}
+          <Grid item xs={12} md={enableBidirectional ? 6 : 12}>
+            <Paper variant="outlined" sx={{ p: 2 }}>
+              <Typography variant="h6" gutterBottom>
+                {enableBidirectional ? 'Forward Direction (A → B)' : 'Privacy Mode'}
+              </Typography>
+
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={privacyModeEnabled}
+                    onChange={(e) => setPrivacyModeEnabled(e.target.checked)}
+                  />
+                }
+                label="Enable Privacy Mode"
+              />
+
+              {privacyModeEnabled && (
+                <TextField
+                  fullWidth
+                  label="Placeholder Text"
+                  value={privacyPlaceholderText}
+                  onChange={(e) => setPrivacyPlaceholderText(e.target.value)}
+                  helperText="Events will show this text instead of actual details"
+                  sx={{ mt: 2 }}
+                />
+              )}
+
+              <Alert severity="info" sx={{ mt: 2 }}>
+                Privacy mode replaces event titles, descriptions, and locations with placeholder text.
+                Start/end times are preserved for calendar blocking.
+              </Alert>
+            </Paper>
+          </Grid>
+
+          {/* Reverse direction privacy (B→A) - only shown if bidirectional enabled */}
+          {enableBidirectional && (
+            <Grid item xs={12} md={6}>
+              <Paper variant="outlined" sx={{ p: 2 }}>
+                <Typography variant="h6" gutterBottom>
+                  Reverse Direction (B → A)
+                </Typography>
+
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={reversePrivacyModeEnabled}
+                      onChange={(e) => setReversePrivacyModeEnabled(e.target.checked)}
+                    />
+                  }
+                  label="Enable Privacy Mode"
+                />
+
+                {reversePrivacyModeEnabled && (
+                  <TextField
+                    fullWidth
+                    label="Placeholder Text"
+                    value={reversePrivacyPlaceholderText}
+                    onChange={(e) => setReversePrivacyPlaceholderText(e.target.value)}
+                    helperText="Events will show this text instead of actual details"
+                    sx={{ mt: 2 }}
+                  />
+                )}
+              </Paper>
+            </Grid>
+          )}
 
           <Grid item xs={12}>
             <Divider sx={{ my: 2 }} />

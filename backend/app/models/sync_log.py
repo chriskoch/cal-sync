@@ -20,6 +20,9 @@ class SyncLog(Base):
     # Status (success, failed, partial)
     status = Column(String(20), nullable=False)
 
+    # Sync direction (for bi-directional sync tracking)
+    sync_direction = Column(String(20), nullable=True)  # 'one_way', 'bidirectional_a_to_b', 'bidirectional_b_to_a'
+
     # Error message if failed
     error_message = Column(Text)
 
