@@ -166,19 +166,33 @@ def oauth_callback(code: str, state: str, db: Session = Depends(get_db)):
     access_token_encrypted = encrypt_token(creds.token)
     refresh_token_encrypted = encrypt_token(creds.refresh_token) if creds.refresh_token else None
 
-    # Handle registration flow
+    # Handle registration/login flow
     if account_type == "register":
         # Check if user already exists by email
         existing_user = db.query(User).filter(User.email == google_email).first()
-        
+
         if existing_user:
-            # Security: Reject registration attempts for existing users
-            # This prevents attackers from overwriting OAuth tokens by gaining access to a victim's Google account
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"An account with email {google_email} already exists. Please sign in instead.",
+            # EXISTING USER - Login flow
+            # Update their source OAuth token with the new credentials
+            _upsert_oauth_token(
+                db=db,
+                user_id=str(existing_user.id),
+                account_type="source",
+                google_email=google_email,
+                access_token_encrypted=access_token_encrypted,
+                refresh_token_encrypted=refresh_token_encrypted,
+                token_expiry=creds.expiry,
+                scopes=creds.scopes,
             )
-        
+            db.commit()
+
+            # Generate JWT token for existing user
+            access_token = create_access_token(data={"sub": str(existing_user.id)})
+
+            # Redirect to frontend with JWT token
+            return RedirectResponse(url=f"{settings.frontend_url}/dashboard?token={access_token}")
+
+        # NEW USER - Registration flow
         # Create new user
         user = User(
             email=google_email,
@@ -187,7 +201,7 @@ def oauth_callback(code: str, state: str, db: Session = Depends(get_db)):
         )
         db.add(user)
         db.flush()  # Flush to get user.id
-        
+
         # Create source OAuth token for new user
         _upsert_oauth_token(
             db=db,
@@ -203,7 +217,7 @@ def oauth_callback(code: str, state: str, db: Session = Depends(get_db)):
 
         # Generate JWT token
         access_token = create_access_token(data={"sub": str(user.id)})
-        
+
         # Redirect to frontend with JWT token
         return RedirectResponse(url=f"{settings.frontend_url}/dashboard?token={access_token}")
     

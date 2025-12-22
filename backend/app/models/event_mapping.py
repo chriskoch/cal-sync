@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, DateTime, ForeignKey, UniqueConstraint
+from sqlalchemy import Column, String, DateTime, ForeignKey, UniqueConstraint, Boolean
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -29,6 +29,10 @@ class EventMapping(Base):
 
     # Content hash (SHA-256) for change detection
     content_hash = Column(String(64))
+
+    # Bi-directional sync metadata
+    origin_calendar_id = Column(String(255), nullable=True)  # Which calendar originally created the event
+    is_privacy_mode = Column(Boolean, default=False, nullable=False)  # If event was synced with privacy mode
 
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)

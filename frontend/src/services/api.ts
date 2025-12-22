@@ -66,6 +66,12 @@ export interface SyncConfig {
   sync_lookahead_days: number;
   destination_color_id?: string;
   last_synced_at?: string;
+
+  // Bi-directional sync fields
+  sync_direction: 'one_way' | 'bidirectional_a_to_b' | 'bidirectional_b_to_a';
+  paired_config_id?: string;
+  privacy_mode_enabled: boolean;
+  privacy_placeholder_text?: string;
 }
 
 export interface SyncLog {
@@ -74,11 +80,31 @@ export interface SyncLog {
   events_updated: number;
   events_deleted: number;
   status: string;
+  sync_direction?: string;
   error_message?: string;
   sync_window_start: string;
   sync_window_end: string;
   started_at: string;
   completed_at?: string;
+}
+
+export interface CreateSyncConfigRequest {
+  source_calendar_id: string;
+  dest_calendar_id: string;
+  sync_lookahead_days?: number;
+  destination_color_id?: string;
+  enable_bidirectional?: boolean;
+  privacy_mode_enabled?: boolean;
+  privacy_placeholder_text?: string;
+  reverse_privacy_mode_enabled?: boolean;
+  reverse_privacy_placeholder_text?: string;
+}
+
+export interface UpdateSyncConfigRequest {
+  privacy_mode_enabled?: boolean;
+  privacy_placeholder_text?: string;
+  is_active?: boolean;
+  destination_color_id?: string;
 }
 
 // API methods
@@ -99,15 +125,18 @@ export const calendarsAPI = {
 };
 
 export const syncAPI = {
-  createConfig: (source_calendar_id: string, dest_calendar_id: string, sync_lookahead_days = 90, destination_color_id?: string) =>
-    api.post<SyncConfig>('/sync/config', { source_calendar_id, dest_calendar_id, sync_lookahead_days, destination_color_id }),
+  createConfig: (data: CreateSyncConfigRequest) =>
+    api.post<SyncConfig>('/sync/config', data),
+
+  updateConfig: (configId: string, data: UpdateSyncConfigRequest) =>
+    api.patch<SyncConfig>(`/sync/config/${configId}`, data),
 
   listConfigs: () => api.get<SyncConfig[]>('/sync/config'),
 
   deleteConfig: (configId: string) => api.delete(`/sync/config/${configId}`),
 
-  triggerSync: (configId: string) =>
-    api.post<{ message: string; sync_log_id: string }>(`/sync/trigger/${configId}`),
+  triggerSync: (configId: string, triggerBothDirections = false) =>
+    api.post<{ message: string; sync_log_id: string }>(`/sync/trigger/${configId}?trigger_both_directions=${triggerBothDirections}`),
 
   getSyncLogs: (configId: string) => api.get<SyncLog[]>(`/sync/logs/${configId}`),
 };

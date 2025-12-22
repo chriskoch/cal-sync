@@ -376,18 +376,18 @@ class TestOAuthRegistration:
     @patch('googleapiclient.discovery.build')
     @patch('app.api.oauth.create_flow')
     @patch('app.api.oauth.oauth_states')
-    def test_oauth_registration_existing_user_rejected(
-        self, mock_states, mock_create_flow, mock_build, 
+    def test_oauth_registration_existing_user_login(
+        self, mock_states, mock_create_flow, mock_build,
         client, db, test_user, mock_oauth_credentials, mock_google_calendar_api
     ):
-        """Test OAuth registration with existing user is rejected for security."""
-        # Setup existing source token to verify it's not modified
+        """Test OAuth registration with existing user logs them in."""
+        # Setup existing source token to verify it gets updated
         existing_token = OAuthToken(
             user_id=test_user.id,
             account_type="source",
-            google_email="existing@example.com",
-            access_token_encrypted=encrypt_token("existing_access"),
-            refresh_token_encrypted=encrypt_token("existing_refresh"),
+            google_email=test_user.email,
+            access_token_encrypted=encrypt_token("old_access"),
+            refresh_token_encrypted=encrypt_token("old_refresh"),
             scopes=["https://www.googleapis.com/auth/calendar"],
         )
         db.add(existing_token)
@@ -417,19 +417,21 @@ class TestOAuthRegistration:
             follow_redirects=False
         )
 
-        # Should reject registration for existing user (security fix)
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
-        assert "already exists" in response.json()["detail"].lower()
-        assert test_user.email in response.json()["detail"]
+        # Should redirect to dashboard with JWT token for existing user
+        assert response.status_code == status.HTTP_307_TEMPORARY_REDIRECT
+        assert "/dashboard?token=" in response.headers["location"]
 
-        # Verify existing token was NOT modified (security check)
+        # Verify source token was updated with new OAuth credentials
         token = db.query(OAuthToken).filter(
             OAuthToken.user_id == test_user.id,
             OAuthToken.account_type == "source"
         ).first()
         assert token is not None
-        assert token.google_email == "existing@example.com"
-        # Decrypt and compare actual token values (encryption is non-deterministic)
+        assert token.google_email == test_user.email
+
+        # Verify token was updated (decrypted values should match new credentials)
         from app.core.security import decrypt_token
-        decrypted_token = decrypt_token(token.access_token_encrypted)
-        assert decrypted_token == "existing_access"
+        decrypted_access = decrypt_token(token.access_token_encrypted)
+        assert decrypted_access == "new_access_token"
+        decrypted_refresh = decrypt_token(token.refresh_token_encrypted)
+        assert decrypted_refresh == "new_refresh_token"
