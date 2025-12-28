@@ -63,12 +63,12 @@ export default function SyncConfigForm({ onConfigCreated }: SyncConfigFormProps)
     e.preventDefault();
 
     if (!sourceCalendarId || !destCalendarId) {
-      setError('Please select both source and destination calendars');
+      setError('Please select both from and to calendars');
       return;
     }
 
     if (sourceCalendarId === destCalendarId) {
-      setError('Source and destination calendars must be different');
+      setError('From and to calendars must be different');
       return;
     }
 
@@ -112,8 +112,8 @@ export default function SyncConfigForm({ onConfigCreated }: SyncConfigFormProps)
         Configure Calendar Sync
       </Typography>
       <Typography color="text.secondary" paragraph>
-        Select which calendars you want to sync. Events from the source calendar will be
-        copied to the destination calendar.
+        Select which calendars you want to sync. Events will be copied from one calendar
+        to the other.
       </Typography>
 
       {error && (
@@ -137,7 +137,7 @@ export default function SyncConfigForm({ onConfigCreated }: SyncConfigFormProps)
               onChange={(id, calendar) => {
                 setSourceCalendarId(id);
 
-                // Auto-select source calendar's color for destination
+                // Auto-select from calendar's color for to calendar
                 if (calendar?.color_id && calendar.color_id.trim() !== '') {
                   // Check if the color_id is in our supported range (1-11)
                   // Event colors in Google Calendar only support IDs 1-11
@@ -164,7 +164,7 @@ export default function SyncConfigForm({ onConfigCreated }: SyncConfigFormProps)
                   setDestinationColorId('');
                 }
               }}
-              label="Source Calendar (sync FROM)"
+              label="From Calendar"
             />
           </Grid>
 
@@ -173,7 +173,7 @@ export default function SyncConfigForm({ onConfigCreated }: SyncConfigFormProps)
               accountType="destination"
               value={destCalendarId}
               onChange={(id) => setDestCalendarId(id)}
-              label="Destination Calendar (sync TO)"
+              label="To Calendar"
             />
           </Grid>
 
