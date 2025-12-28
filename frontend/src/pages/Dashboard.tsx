@@ -22,7 +22,7 @@ import {
 } from '@mui/material';
 import { CheckCircle, Cancel, ExitToApp, PlayArrow, Refresh, Delete, History, Circle, AccountCircle, Lock, SwapHoriz } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
-import { oauthAPI, OAuthStatus, SyncConfig, syncAPI } from '../services/api';
+import { oauthAPI, OAuthStatus, SyncConfig, syncAPI, calendarsAPI, CalendarItem } from '../services/api';
 import SyncConfigForm from '../components/SyncConfigForm';
 import SyncHistoryDialog from '../components/SyncHistoryDialog';
 
@@ -52,10 +52,12 @@ export default function Dashboard() {
   const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
   const [selectedConfigId, setSelectedConfigId] = useState<string | null>(null);
   const [userMenuAnchor, setUserMenuAnchor] = useState<null | HTMLElement>(null);
+  const [calendarNames, setCalendarNames] = useState<{ [key: string]: string }>({});
 
   useEffect(() => {
     fetchOAuthStatus();
     fetchSyncConfigs();
+    fetchCalendarNames();
   }, []);
 
   const fetchOAuthStatus = async () => {
@@ -77,6 +79,40 @@ export default function Dashboard() {
     } catch (err: unknown) {
       console.error('Failed to fetch sync configs:', err);
     }
+  };
+
+  const fetchCalendarNames = async () => {
+    try {
+      const nameMap: { [key: string]: string } = {};
+
+      // Fetch source calendars
+      try {
+        const sourceResponse = await calendarsAPI.listCalendars('source');
+        sourceResponse.data.calendars.forEach((cal: CalendarItem) => {
+          nameMap[cal.id] = cal.summary;
+        });
+      } catch (err) {
+        console.error('Failed to fetch source calendars:', err);
+      }
+
+      // Fetch destination calendars
+      try {
+        const destResponse = await calendarsAPI.listCalendars('destination');
+        destResponse.data.calendars.forEach((cal: CalendarItem) => {
+          nameMap[cal.id] = cal.summary;
+        });
+      } catch (err) {
+        console.error('Failed to fetch destination calendars:', err);
+      }
+
+      setCalendarNames(nameMap);
+    } catch (err: unknown) {
+      console.error('Failed to fetch calendar names:', err);
+    }
+  };
+
+  const getCalendarDisplayName = (calendarId: string): string => {
+    return calendarNames[calendarId] || calendarId;
   };
 
   const handleTriggerSync = async (configId: string, triggerBothDirections = false) => {
@@ -262,12 +298,12 @@ export default function Dashboard() {
           <Typography>Loading...</Typography>
         ) : (
           <Grid container spacing={3}>
-            {/* Source Calendar Card */}
+            {/* From Calendar Card */}
             <Grid item xs={12} md={6}>
               <Card>
                 <CardContent>
                   <Typography variant="h5" gutterBottom>
-                    Source Calendar
+                    From Calendar
                   </Typography>
                   <Typography color="text.secondary" gutterBottom>
                     The calendar you want to sync FROM
@@ -305,12 +341,12 @@ export default function Dashboard() {
               </Card>
             </Grid>
 
-            {/* Destination Calendar Card */}
+            {/* To Calendar Card */}
             <Grid item xs={12} md={6}>
               <Card>
                 <CardContent>
                   <Typography variant="h5" gutterBottom>
-                    Destination Calendar
+                    To Calendar
                   </Typography>
                   <Typography color="text.secondary" gutterBottom>
                     The calendar you want to sync TO
@@ -386,7 +422,7 @@ export default function Dashboard() {
                               {/* Forward direction */}
                               <Box sx={{ mb: 2, pl: 2, borderLeft: '3px solid', borderColor: 'primary.main' }}>
                                 <Typography variant="subtitle2" color="primary" gutterBottom>
-                                  Forward: {forwardConfig.source_calendar_id} → {forwardConfig.dest_calendar_id}
+                                  Forward: {getCalendarDisplayName(forwardConfig.source_calendar_id)} → {getCalendarDisplayName(forwardConfig.dest_calendar_id)}
                                 </Typography>
                                 <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 1 }}>
                                   {forwardConfig.destination_color_id && CALENDAR_COLORS[forwardConfig.destination_color_id] && (
@@ -412,7 +448,7 @@ export default function Dashboard() {
                               {reverseConfig && (
                                 <Box sx={{ pl: 2, borderLeft: '3px solid', borderColor: 'secondary.main' }}>
                                   <Typography variant="subtitle2" color="secondary" gutterBottom>
-                                    Reverse: {reverseConfig.source_calendar_id} → {reverseConfig.dest_calendar_id}
+                                    Reverse: {getCalendarDisplayName(reverseConfig.source_calendar_id)} → {getCalendarDisplayName(reverseConfig.dest_calendar_id)}
                                   </Typography>
                                   <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 1 }}>
                                     {reverseConfig.destination_color_id && CALENDAR_COLORS[reverseConfig.destination_color_id] && (
@@ -489,10 +525,10 @@ export default function Dashboard() {
                                   Sync Configuration
                                 </Typography>
                                 <Typography variant="body2" color="text.secondary">
-                                  Source Calendar: <strong>{config.source_calendar_id}</strong>
+                                  From Calendar: <strong>{getCalendarDisplayName(config.source_calendar_id)}</strong>
                                 </Typography>
                                 <Typography variant="body2" color="text.secondary">
-                                  Destination Calendar: <strong>{config.dest_calendar_id}</strong>
+                                  To Calendar: <strong>{getCalendarDisplayName(config.dest_calendar_id)}</strong>
                                 </Typography>
                                 <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
                                   Sync Lookahead: <strong>{config.sync_lookahead_days} days</strong>

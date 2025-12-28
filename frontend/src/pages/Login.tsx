@@ -91,7 +91,7 @@ export default function Login() {
             </Button>
             <Typography variant="body2" color="text.secondary" align="center" sx={{ mt: 2 }}>
               By signing in, you agree to sync your Google Calendar events.
-              Your Google account will be used as the source calendar.
+              Your Google account will be used as the from calendar.
             </Typography>
           </Box>
         </Paper>
