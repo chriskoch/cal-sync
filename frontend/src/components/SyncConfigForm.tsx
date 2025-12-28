@@ -41,7 +41,9 @@ const CALENDAR_COLORS = [
 
 export default function SyncConfigForm({ onConfigCreated }: SyncConfigFormProps) {
   const [sourceCalendarId, setSourceCalendarId] = useState('');
+  const [sourceCalendarName, setSourceCalendarName] = useState('');
   const [destCalendarId, setDestCalendarId] = useState('');
+  const [destCalendarName, setDestCalendarName] = useState('');
   const [syncLookaheadDays, setSyncLookaheadDays] = useState(90);
   const [destinationColorId, setDestinationColorId] = useState('');
   const [loading, setLoading] = useState(false);
@@ -51,11 +53,11 @@ export default function SyncConfigForm({ onConfigCreated }: SyncConfigFormProps)
   // Bi-directional sync settings
   const [enableBidirectional, setEnableBidirectional] = useState(false);
 
-  // Privacy mode settings (forward direction A→B)
+  // Privacy mode settings (forward direction From→To)
   const [privacyModeEnabled, setPrivacyModeEnabled] = useState(false);
   const [privacyPlaceholderText, setPrivacyPlaceholderText] = useState('Personal appointment');
 
-  // Privacy mode settings (reverse direction B→A)
+  // Privacy mode settings (reverse direction To→From)
   const [reversePrivacyModeEnabled, setReversePrivacyModeEnabled] = useState(false);
   const [reversePrivacyPlaceholderText, setReversePrivacyPlaceholderText] = useState('Personal appointment');
 
@@ -136,6 +138,7 @@ export default function SyncConfigForm({ onConfigCreated }: SyncConfigFormProps)
               value={sourceCalendarId}
               onChange={(id, calendar) => {
                 setSourceCalendarId(id);
+                setSourceCalendarName(calendar?.summary || '');
 
                 // Auto-select from calendar's color for to calendar
                 if (calendar?.color_id && calendar.color_id.trim() !== '') {
@@ -172,7 +175,10 @@ export default function SyncConfigForm({ onConfigCreated }: SyncConfigFormProps)
             <CalendarSelector
               accountType="destination"
               value={destCalendarId}
-              onChange={(id) => setDestCalendarId(id)}
+              onChange={(id, calendar) => {
+                setDestCalendarId(id);
+                setDestCalendarName(calendar?.summary || '');
+              }}
               label="To Calendar"
             />
           </Grid>
@@ -216,7 +222,7 @@ export default function SyncConfigForm({ onConfigCreated }: SyncConfigFormProps)
               label="Enable Bi-Directional Sync"
             />
             <Typography variant="body2" color="text.secondary" sx={{ ml: 4 }}>
-              When enabled, events will sync in both directions (A ↔ B)
+              When enabled, events will sync in both directions (From ↔ To)
             </Typography>
           </Grid>
 
@@ -227,11 +233,13 @@ export default function SyncConfigForm({ onConfigCreated }: SyncConfigFormProps)
             </Divider>
           </Grid>
 
-          {/* Forward direction privacy (A→B) */}
+          {/* Forward direction privacy (From→To) */}
           <Grid item xs={12} md={enableBidirectional ? 6 : 12}>
             <Paper variant="outlined" sx={{ p: 2 }}>
               <Typography variant="h6" gutterBottom>
-                {enableBidirectional ? 'Forward Direction (A → B)' : 'Privacy Mode'}
+                {enableBidirectional
+                  ? `Forward: ${sourceCalendarName || 'From'} → ${destCalendarName || 'To'}`
+                  : 'Privacy Mode'}
               </Typography>
 
               <FormControlLabel
@@ -262,12 +270,12 @@ export default function SyncConfigForm({ onConfigCreated }: SyncConfigFormProps)
             </Paper>
           </Grid>
 
-          {/* Reverse direction privacy (B→A) - only shown if bidirectional enabled */}
+          {/* Reverse direction privacy (To→From) - only shown if bidirectional enabled */}
           {enableBidirectional && (
             <Grid item xs={12} md={6}>
               <Paper variant="outlined" sx={{ p: 2 }}>
                 <Typography variant="h6" gutterBottom>
-                  Reverse Direction (B → A)
+                  Reverse: {destCalendarName || 'To'} → {sourceCalendarName || 'From'}
                 </Typography>
 
                 <FormControlLabel
