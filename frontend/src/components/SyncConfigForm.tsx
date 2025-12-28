@@ -53,11 +53,11 @@ export default function SyncConfigForm({ onConfigCreated }: SyncConfigFormProps)
   // Bi-directional sync settings
   const [enableBidirectional, setEnableBidirectional] = useState(false);
 
-  // Privacy mode settings (forward direction From→To)
+  // Privacy mode settings (Business→Private direction)
   const [privacyModeEnabled, setPrivacyModeEnabled] = useState(false);
   const [privacyPlaceholderText, setPrivacyPlaceholderText] = useState('Personal appointment');
 
-  // Privacy mode settings (reverse direction To→From)
+  // Privacy mode settings (Private→Business direction)
   const [reversePrivacyModeEnabled, setReversePrivacyModeEnabled] = useState(false);
   const [reversePrivacyPlaceholderText, setReversePrivacyPlaceholderText] = useState('Personal appointment');
 
@@ -65,12 +65,12 @@ export default function SyncConfigForm({ onConfigCreated }: SyncConfigFormProps)
     e.preventDefault();
 
     if (!sourceCalendarId || !destCalendarId) {
-      setError('Please select both from and to calendars');
+      setError('Please select both Business and Private calendars');
       return;
     }
 
     if (sourceCalendarId === destCalendarId) {
-      setError('From and to calendars must be different');
+      setError('Business and Private calendars must be different');
       return;
     }
 
@@ -114,8 +114,7 @@ export default function SyncConfigForm({ onConfigCreated }: SyncConfigFormProps)
         Configure Calendar Sync
       </Typography>
       <Typography color="text.secondary" paragraph>
-        Select which calendars you want to sync. Events will be copied from one calendar
-        to the other.
+        Select your Business and Private calendars. Events will sync between them.
       </Typography>
 
       {error && (
@@ -140,7 +139,7 @@ export default function SyncConfigForm({ onConfigCreated }: SyncConfigFormProps)
                 setSourceCalendarId(id);
                 setSourceCalendarName(calendar?.summary || '');
 
-                // Auto-select from calendar's color for to calendar
+                // Auto-select Business calendar's color for Private calendar
                 if (calendar?.color_id && calendar.color_id.trim() !== '') {
                   // Check if the color_id is in our supported range (1-11)
                   // Event colors in Google Calendar only support IDs 1-11
@@ -167,7 +166,7 @@ export default function SyncConfigForm({ onConfigCreated }: SyncConfigFormProps)
                   setDestinationColorId('');
                 }
               }}
-              label="From Calendar"
+              label="Business Calendar"
             />
           </Grid>
 
@@ -179,7 +178,7 @@ export default function SyncConfigForm({ onConfigCreated }: SyncConfigFormProps)
                 setDestCalendarId(id);
                 setDestCalendarName(calendar?.summary || '');
               }}
-              label="To Calendar"
+              label="Private Calendar"
             />
           </Grid>
 
@@ -222,7 +221,7 @@ export default function SyncConfigForm({ onConfigCreated }: SyncConfigFormProps)
               label="Enable Bi-Directional Sync"
             />
             <Typography variant="body2" color="text.secondary" sx={{ ml: 4 }}>
-              When enabled, events will sync in both directions (From ↔ To)
+              When enabled, events will sync in both directions between calendars
             </Typography>
           </Grid>
 
@@ -233,12 +232,12 @@ export default function SyncConfigForm({ onConfigCreated }: SyncConfigFormProps)
             </Divider>
           </Grid>
 
-          {/* Forward direction privacy (From→To) */}
+          {/* Business→Private direction privacy */}
           <Grid item xs={12} md={enableBidirectional ? 6 : 12}>
             <Paper variant="outlined" sx={{ p: 2 }}>
               <Typography variant="h6" gutterBottom>
                 {enableBidirectional
-                  ? `Forward: ${sourceCalendarName || 'From'} → ${destCalendarName || 'To'}`
+                  ? `${sourceCalendarName || 'Business'} → ${destCalendarName || 'Private'}`
                   : 'Privacy Mode'}
               </Typography>
 
@@ -270,12 +269,12 @@ export default function SyncConfigForm({ onConfigCreated }: SyncConfigFormProps)
             </Paper>
           </Grid>
 
-          {/* Reverse direction privacy (To→From) - only shown if bidirectional enabled */}
+          {/* Private→Business direction privacy - only shown if bidirectional enabled */}
           {enableBidirectional && (
             <Grid item xs={12} md={6}>
               <Paper variant="outlined" sx={{ p: 2 }}>
                 <Typography variant="h6" gutterBottom>
-                  Reverse: {destCalendarName || 'To'} → {sourceCalendarName || 'From'}
+                  {destCalendarName || 'Private'} → {sourceCalendarName || 'Business'}
                 </Typography>
 
                 <FormControlLabel

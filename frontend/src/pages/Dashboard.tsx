@@ -298,15 +298,15 @@ export default function Dashboard() {
           <Typography>Loading...</Typography>
         ) : (
           <Grid container spacing={3}>
-            {/* From Calendar Card */}
+            {/* Business Calendar Card */}
             <Grid item xs={12} md={6}>
               <Card>
                 <CardContent>
                   <Typography variant="h5" gutterBottom>
-                    From Calendar
+                    Business Calendar
                   </Typography>
                   <Typography color="text.secondary" gutterBottom>
-                    The calendar you want to sync FROM
+                    Your first calendar for syncing
                   </Typography>
 
                   <Box sx={{ mt: 2, display: 'flex', alignItems: 'center' }}>
@@ -341,15 +341,15 @@ export default function Dashboard() {
               </Card>
             </Grid>
 
-            {/* To Calendar Card */}
+            {/* Private Calendar Card */}
             <Grid item xs={12} md={6}>
               <Card>
                 <CardContent>
                   <Typography variant="h5" gutterBottom>
-                    To Calendar
+                    Private Calendar
                   </Typography>
                   <Typography color="text.secondary" gutterBottom>
-                    The calendar you want to sync TO
+                    Your second calendar for syncing
                   </Typography>
 
                   <Box sx={{ mt: 2, display: 'flex', alignItems: 'center' }}>
@@ -525,10 +525,10 @@ export default function Dashboard() {
                                   Sync Configuration
                                 </Typography>
                                 <Typography variant="body2" color="text.secondary">
-                                  From Calendar: <strong>{getCalendarDisplayName(config.source_calendar_id)}</strong>
+                                  Business: <strong>{getCalendarDisplayName(config.source_calendar_id)}</strong>
                                 </Typography>
                                 <Typography variant="body2" color="text.secondary">
-                                  To Calendar: <strong>{getCalendarDisplayName(config.dest_calendar_id)}</strong>
+                                  Private: <strong>{getCalendarDisplayName(config.dest_calendar_id)}</strong>
                                 </Typography>
                                 <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
                                   Sync Lookahead: <strong>{config.sync_lookahead_days} days</strong>
