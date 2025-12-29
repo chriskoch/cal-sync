@@ -1,13 +1,11 @@
 import { useState } from 'react';
 import {
   Box,
-  Paper,
   Typography,
   Button,
   TextField,
   Alert,
   Grid,
-  Divider,
   FormControl,
   InputLabel,
   Select,
@@ -15,8 +13,15 @@ import {
   Switch,
   FormControlLabel,
   Chip,
+  Divider,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  IconButton,
+  Card,
 } from '@mui/material';
-import { PlayArrow, Circle } from '@mui/icons-material';
+import { PlayArrow, Circle, Lock, Close, Add } from '@mui/icons-material';
 import CalendarSelector from './CalendarSelector';
 import { syncAPI, SyncConfig } from '../services/api';
 
@@ -40,6 +45,7 @@ const CALENDAR_COLORS = [
 ];
 
 export default function SyncConfigForm({ onConfigCreated }: SyncConfigFormProps) {
+  const [open, setOpen] = useState(false);
   const [sourceCalendarId, setSourceCalendarId] = useState('');
   const [sourceCalendarName, setSourceCalendarName] = useState('');
   const [destCalendarId, setDestCalendarId] = useState('');
@@ -60,6 +66,28 @@ export default function SyncConfigForm({ onConfigCreated }: SyncConfigFormProps)
   // Privacy mode settings (Private→Business direction)
   const [reversePrivacyModeEnabled, setReversePrivacyModeEnabled] = useState(false);
   const [reversePrivacyPlaceholderText, setReversePrivacyPlaceholderText] = useState('Personal appointment');
+
+  const handleOpen = () => {
+    setOpen(true);
+    // Reset form
+    setSourceCalendarId('');
+    setSourceCalendarName('');
+    setDestCalendarId('');
+    setDestCalendarName('');
+    setSyncLookaheadDays(90);
+    setDestinationColorId('');
+    setEnableBidirectional(false);
+    setPrivacyModeEnabled(false);
+    setPrivacyPlaceholderText('Personal appointment');
+    setReversePrivacyModeEnabled(false);
+    setReversePrivacyPlaceholderText('Personal appointment');
+    setError('');
+    setSuccess('');
+  };
+
+  const handleClose = () => {
+    setOpen(false);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -94,12 +122,18 @@ export default function SyncConfigForm({ onConfigCreated }: SyncConfigFormProps)
 
       setSuccess(
         enableBidirectional
-          ? 'Bi-directional sync configuration created successfully!'
-          : 'Sync configuration created successfully!'
+          ? 'Bi-directional sync created successfully!'
+          : 'Sync created successfully!'
       );
+
       if (onConfigCreated) {
         onConfigCreated(response.data);
       }
+
+      // Close modal after short delay to show success message
+      setTimeout(() => {
+        handleClose();
+      }, 1500);
     } catch (err: unknown) {
       const error = err as { response?: { data?: { detail?: string } } };
       setError(error.response?.data?.detail || 'Failed to create sync configuration');
@@ -109,229 +143,474 @@ export default function SyncConfigForm({ onConfigCreated }: SyncConfigFormProps)
   };
 
   return (
-    <Paper sx={{ p: 3 }}>
-      <Typography variant="h5" gutterBottom>
-        Configure Calendar Sync
-      </Typography>
-      <Typography color="text.secondary" paragraph>
-        Select your Business and Private calendars. Events will sync between them.
-      </Typography>
+    <>
+      {/* Trigger Button */}
+      <Button
+        variant="contained"
+        startIcon={<Add />}
+        onClick={handleOpen}
+        sx={{
+          textTransform: 'none',
+          fontSize: '14px',
+          fontWeight: 500,
+          borderRadius: 2,
+          px: 3,
+          bgcolor: '#1a73e8',
+          '&:hover': {
+            bgcolor: '#1765cc',
+          },
+        }}
+      >
+        Create new sync
+      </Button>
 
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {error}
-        </Alert>
-      )}
-
-      {success && (
-        <Alert severity="success" sx={{ mb: 2 }}>
-          {success}
-        </Alert>
-      )}
-
-      <form onSubmit={handleSubmit}>
-        <Grid container spacing={3}>
-          <Grid item xs={12} md={6}>
-            <CalendarSelector
-              accountType="source"
-              value={sourceCalendarId}
-              onChange={(id, calendar) => {
-                setSourceCalendarId(id);
-                setSourceCalendarName(calendar?.summary || '');
-
-                // Auto-select Business calendar's color for Private calendar
-                if (calendar?.color_id && calendar.color_id.trim() !== '') {
-                  // Check if the color_id is in our supported range (1-11)
-                  // Event colors in Google Calendar only support IDs 1-11
-                  const isValidColorId = CALENDAR_COLORS.some(c => c.id === calendar.color_id);
-                  if (isValidColorId) {
-                    setDestinationColorId(calendar.color_id);
-                  } else {
-                    // Color ID out of range for events, default to Lavender (1)
-                    setDestinationColorId(CALENDAR_COLORS[0].id);
-                  }
-                } else if (calendar?.background_color) {
-                  // Try to map background_color to a color ID
-                  const matchedColor = CALENDAR_COLORS.find(
-                    c => c.color.toLowerCase() === calendar.background_color?.toLowerCase()
-                  );
-                  if (matchedColor) {
-                    setDestinationColorId(matchedColor.id);
-                  } else {
-                    // Default to first color if no match
-                    setDestinationColorId(CALENDAR_COLORS[0].id);
-                  }
-                } else {
-                  // No color information, use "Same as source"
-                  setDestinationColorId('');
-                }
+      {/* Modal Dialog */}
+      <Dialog
+        open={open}
+        onClose={handleClose}
+        maxWidth="md"
+        fullWidth
+        PaperProps={{
+          elevation: 0,
+          sx: {
+            borderRadius: 3,
+            border: '1px solid',
+            borderColor: 'divider',
+          },
+        }}
+      >
+        <DialogTitle sx={{ pb: 2 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Typography
+              variant="h6"
+              sx={{
+                fontSize: '20px',
+                fontWeight: 400,
+                color: '#202124',
+                letterSpacing: '-0.2px',
               }}
-              label="Business Calendar"
-            />
-          </Grid>
-
-          <Grid item xs={12} md={6}>
-            <CalendarSelector
-              accountType="destination"
-              value={destCalendarId}
-              onChange={(id, calendar) => {
-                setDestCalendarId(id);
-                setDestCalendarName(calendar?.summary || '');
-              }}
-              label="Private Calendar"
-            />
-          </Grid>
-
-          <Grid item xs={12} md={6}>
-            <FormControl fullWidth>
-              <InputLabel>Destination Event Color</InputLabel>
-              <Select
-                value={destinationColorId}
-                onChange={(e) => setDestinationColorId(e.target.value)}
-                label="Destination Event Color"
-              >
-                <MenuItem value="">
-                  <em>Same as source</em>
-                </MenuItem>
-                {CALENDAR_COLORS.map((colorOption) => (
-                  <MenuItem key={colorOption.id} value={colorOption.id}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Circle sx={{ color: colorOption.color, fontSize: 16 }} />
-                      {colorOption.name}
-                    </Box>
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Grid>
-
-          <Grid item xs={12}>
-            <Divider sx={{ my: 2 }} />
-          </Grid>
-
-          {/* Bi-directional sync toggle */}
-          <Grid item xs={12}>
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={enableBidirectional}
-                  onChange={(e) => setEnableBidirectional(e.target.checked)}
-                />
-              }
-              label="Enable Bi-Directional Sync"
-            />
-            <Typography variant="body2" color="text.secondary" sx={{ ml: 4 }}>
-              When enabled, events will sync in both directions between calendars
+            >
+              Create new sync
             </Typography>
-          </Grid>
+            <IconButton
+              onClick={handleClose}
+              size="small"
+              sx={{
+                color: '#5f6368',
+                '&:hover': { bgcolor: 'rgba(0, 0, 0, 0.04)' },
+              }}
+            >
+              <Close fontSize="small" />
+            </IconButton>
+          </Box>
+          <Typography
+            variant="body2"
+            sx={{
+              fontSize: '14px',
+              color: '#5f6368',
+              mt: 0.5,
+            }}
+          >
+            Select calendars from your connected accounts. Events will sync between them.
+          </Typography>
+        </DialogTitle>
 
-          {/* Privacy settings section */}
-          <Grid item xs={12}>
-            <Divider sx={{ my: 2 }}>
-              <Chip label="Privacy Settings" />
-            </Divider>
-          </Grid>
-
-          {/* Business→Private direction privacy */}
-          <Grid item xs={12} md={enableBidirectional ? 6 : 12}>
-            <Paper variant="outlined" sx={{ p: 2 }}>
-              <Typography variant="h6" gutterBottom>
-                {enableBidirectional
-                  ? `${sourceCalendarName || 'Business'} → ${destCalendarName || 'Private'}`
-                  : 'Privacy Mode'}
-              </Typography>
-
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={privacyModeEnabled}
-                    onChange={(e) => setPrivacyModeEnabled(e.target.checked)}
-                  />
-                }
-                label="Enable Privacy Mode"
-              />
-
-              {privacyModeEnabled && (
-                <TextField
-                  fullWidth
-                  label="Placeholder Text"
-                  value={privacyPlaceholderText}
-                  onChange={(e) => setPrivacyPlaceholderText(e.target.value)}
-                  helperText="Events will show this text instead of actual details"
-                  sx={{ mt: 2 }}
-                />
-              )}
-
-              <Alert severity="info" sx={{ mt: 2 }}>
-                Privacy mode replaces event titles, descriptions, and locations with placeholder text.
-                Start/end times are preserved for calendar blocking.
-              </Alert>
-            </Paper>
-          </Grid>
-
-          {/* Private→Business direction privacy - only shown if bidirectional enabled */}
-          {enableBidirectional && (
-            <Grid item xs={12} md={6}>
-              <Paper variant="outlined" sx={{ p: 2 }}>
-                <Typography variant="h6" gutterBottom>
-                  {destCalendarName || 'Private'} → {sourceCalendarName || 'Business'}
-                </Typography>
-
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={reversePrivacyModeEnabled}
-                      onChange={(e) => setReversePrivacyModeEnabled(e.target.checked)}
-                    />
-                  }
-                  label="Enable Privacy Mode"
-                />
-
-                {reversePrivacyModeEnabled && (
-                  <TextField
-                    fullWidth
-                    label="Placeholder Text"
-                    value={reversePrivacyPlaceholderText}
-                    onChange={(e) => setReversePrivacyPlaceholderText(e.target.value)}
-                    helperText="Events will show this text instead of actual details"
-                    sx={{ mt: 2 }}
-                  />
-                )}
-              </Paper>
-            </Grid>
+        <DialogContent sx={{ px: 3, pb: 2 }}>
+          {error && (
+            <Alert severity="error" sx={{ mb: 3, borderRadius: 2 }}>
+              {error}
+            </Alert>
           )}
 
-          <Grid item xs={12}>
-            <Divider sx={{ my: 2 }} />
-          </Grid>
+          {success && (
+            <Alert severity="success" sx={{ mb: 3, borderRadius: 2 }}>
+              {success}
+            </Alert>
+          )}
 
-          <Grid item xs={12} md={6}>
-            <TextField
-              fullWidth
-              type="number"
-              label="Sync Lookahead Days"
-              value={syncLookaheadDays}
-              onChange={(e) => setSyncLookaheadDays(Number(e.target.value))}
-              helperText="How many days in the future to sync (default: 90)"
-              inputProps={{ min: 1, max: 365 }}
-            />
-          </Grid>
+          <form onSubmit={handleSubmit} id="sync-config-form">
+            <Grid container spacing={3}>
+              {/* Calendar Selectors */}
+              <Grid item xs={12} md={6}>
+                <CalendarSelector
+                  accountType="source"
+                  value={sourceCalendarId}
+                  onChange={(id, calendar) => {
+                    setSourceCalendarId(id);
+                    setSourceCalendarName(calendar?.summary || '');
 
-          <Grid item xs={12}>
-            <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
-              <Button
-                type="submit"
-                variant="contained"
-                size="large"
-                startIcon={<PlayArrow />}
-                disabled={loading || !sourceCalendarId || !destCalendarId}
-              >
-                {loading ? 'Creating...' : 'Create Sync Configuration'}
-              </Button>
-            </Box>
-          </Grid>
-        </Grid>
-      </form>
-    </Paper>
+                    // Auto-select Business calendar's color for Private calendar
+                    if (calendar?.color_id && calendar.color_id.trim() !== '') {
+                      const isValidColorId = CALENDAR_COLORS.some(c => c.id === calendar.color_id);
+                      if (isValidColorId) {
+                        setDestinationColorId(calendar.color_id);
+                      } else {
+                        setDestinationColorId(CALENDAR_COLORS[0].id);
+                      }
+                    } else if (calendar?.background_color) {
+                      const matchedColor = CALENDAR_COLORS.find(
+                        c => c.color.toLowerCase() === calendar.background_color?.toLowerCase()
+                      );
+                      if (matchedColor) {
+                        setDestinationColorId(matchedColor.id);
+                      } else {
+                        setDestinationColorId(CALENDAR_COLORS[0].id);
+                      }
+                    } else {
+                      setDestinationColorId('');
+                    }
+                  }}
+                  label="Calendar from Account 1"
+                />
+              </Grid>
+
+              <Grid item xs={12} md={6}>
+                <CalendarSelector
+                  accountType="destination"
+                  value={destCalendarId}
+                  onChange={(id, calendar) => {
+                    setDestCalendarId(id);
+                    setDestCalendarName(calendar?.summary || '');
+                  }}
+                  label="Calendar from Account 2"
+                />
+              </Grid>
+
+              {/* Sync Settings */}
+              <Grid item xs={12} md={6}>
+                <FormControl fullWidth>
+                  <InputLabel>Event color</InputLabel>
+                  <Select
+                    value={destinationColorId}
+                    onChange={(e) => setDestinationColorId(e.target.value)}
+                    label="Event color"
+                    sx={{
+                      '& .MuiOutlinedInput-notchedOutline': {
+                        borderColor: '#dadce0',
+                      },
+                      '&:hover .MuiOutlinedInput-notchedOutline': {
+                        borderColor: '#1967d2',
+                      },
+                    }}
+                  >
+                    <MenuItem value="">
+                      <em>Same as source</em>
+                    </MenuItem>
+                    {CALENDAR_COLORS.map((colorOption) => (
+                      <MenuItem key={colorOption.id} value={colorOption.id}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                          <Circle sx={{ color: colorOption.color, fontSize: 16 }} />
+                          <Typography sx={{ fontSize: '14px', color: '#202124' }}>
+                            {colorOption.name}
+                          </Typography>
+                        </Box>
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  type="number"
+                  label="Sync lookahead days"
+                  value={syncLookaheadDays}
+                  onChange={(e) => setSyncLookaheadDays(Number(e.target.value))}
+                  helperText="How many days in the future to sync"
+                  inputProps={{ min: 1, max: 365 }}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      '& fieldset': {
+                        borderColor: '#dadce0',
+                      },
+                      '&:hover fieldset': {
+                        borderColor: '#1967d2',
+                      },
+                    },
+                  }}
+                />
+              </Grid>
+
+              {/* Bi-directional Toggle */}
+              <Grid item xs={12}>
+                <Box sx={{ py: 1 }}>
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={enableBidirectional}
+                        onChange={(e) => setEnableBidirectional(e.target.checked)}
+                        sx={{
+                          '& .MuiSwitch-switchBase.Mui-checked': {
+                            color: '#1a73e8',
+                          },
+                          '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                            backgroundColor: '#1a73e8',
+                          },
+                        }}
+                      />
+                    }
+                    label={
+                      <Box>
+                        <Typography sx={{ fontSize: '14px', fontWeight: 500, color: '#202124' }}>
+                          Bi-directional sync
+                        </Typography>
+                        <Typography variant="caption" sx={{ color: '#5f6368', fontSize: '13px' }}>
+                          Events will sync in both directions
+                        </Typography>
+                      </Box>
+                    }
+                  />
+                </Box>
+              </Grid>
+
+              {/* Privacy Settings */}
+              <Grid item xs={12}>
+                <Divider sx={{ my: 1 }}>
+                  <Chip
+                    icon={<Lock sx={{ fontSize: 16 }} />}
+                    label="Privacy settings"
+                    sx={{
+                      fontSize: '13px',
+                      height: 28,
+                      bgcolor: '#f1f3f4',
+                      color: '#5f6368',
+                      border: 'none',
+                    }}
+                  />
+                </Divider>
+              </Grid>
+
+              {/* Business→Private Privacy */}
+              <Grid item xs={12} md={enableBidirectional ? 6 : 12}>
+                <Card
+                  elevation={0}
+                  sx={{
+                    border: '1px solid #dadce0',
+                    borderRadius: 2,
+                    bgcolor: '#f8f9fa',
+                  }}
+                >
+                  <Box sx={{ p: 2.5 }}>
+                    <Typography
+                      variant="subtitle2"
+                      sx={{
+                        fontSize: '14px',
+                        fontWeight: 500,
+                        color: '#202124',
+                        mb: 1.5,
+                      }}
+                    >
+                      {enableBidirectional
+                        ? `${sourceCalendarName || 'Account 1'} → ${destCalendarName || 'Account 2'}`
+                        : 'Privacy mode'}
+                    </Typography>
+
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        fontSize: '13px',
+                        color: '#5f6368',
+                        mb: 1.5,
+                      }}
+                    >
+                      Share your availability without revealing event details
+                    </Typography>
+
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={privacyModeEnabled}
+                          onChange={(e) => setPrivacyModeEnabled(e.target.checked)}
+                          size="small"
+                          sx={{
+                            '& .MuiSwitch-switchBase.Mui-checked': {
+                              color: '#1a73e8',
+                            },
+                            '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                              backgroundColor: '#1a73e8',
+                            },
+                          }}
+                        />
+                      }
+                      label={
+                        <Typography sx={{ fontSize: '14px', color: '#202124' }}>
+                          Hide event details
+                        </Typography>
+                      }
+                    />
+
+                    {privacyModeEnabled && (
+                      <TextField
+                        fullWidth
+                        label="Placeholder text"
+                        value={privacyPlaceholderText}
+                        onChange={(e) => setPrivacyPlaceholderText(e.target.value)}
+                        helperText="Events will show this text instead of actual details"
+                        size="small"
+                        sx={{
+                          mt: 2,
+                          bgcolor: 'white',
+                          '& .MuiOutlinedInput-root': {
+                            '& fieldset': {
+                              borderColor: '#dadce0',
+                            },
+                            '&:hover fieldset': {
+                              borderColor: '#1967d2',
+                            },
+                          },
+                        }}
+                      />
+                    )}
+
+                    <Alert
+                      severity="info"
+                      sx={{
+                        mt: 2,
+                        bgcolor: 'white',
+                        borderRadius: 2,
+                        fontSize: '13px',
+                        '& .MuiAlert-icon': {
+                          fontSize: 18,
+                        },
+                      }}
+                    >
+                      Event titles, descriptions, and locations will be replaced with your placeholder text. Times remain visible for calendar blocking.
+                    </Alert>
+                  </Box>
+                </Card>
+              </Grid>
+
+              {/* Private→Business Privacy */}
+              {enableBidirectional && (
+                <Grid item xs={12} md={6}>
+                  <Card
+                    elevation={0}
+                    sx={{
+                      border: '1px solid #dadce0',
+                      borderRadius: 2,
+                      bgcolor: '#f8f9fa',
+                    }}
+                  >
+                    <Box sx={{ p: 2.5 }}>
+                      <Typography
+                        variant="subtitle2"
+                        sx={{
+                          fontSize: '14px',
+                          fontWeight: 500,
+                          color: '#202124',
+                          mb: 1.5,
+                        }}
+                      >
+                        {destCalendarName || 'Account 2'} → {sourceCalendarName || 'Account 1'}
+                      </Typography>
+
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          fontSize: '13px',
+                          color: '#5f6368',
+                          mb: 1.5,
+                        }}
+                      >
+                        Share your availability without revealing event details
+                      </Typography>
+
+                      <FormControlLabel
+                        control={
+                          <Switch
+                            checked={reversePrivacyModeEnabled}
+                            onChange={(e) => setReversePrivacyModeEnabled(e.target.checked)}
+                            size="small"
+                            sx={{
+                              '& .MuiSwitch-switchBase.Mui-checked': {
+                                color: '#1a73e8',
+                              },
+                              '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                                backgroundColor: '#1a73e8',
+                              },
+                            }}
+                          />
+                        }
+                        label={
+                          <Typography sx={{ fontSize: '14px', color: '#202124' }}>
+                            Hide event details
+                          </Typography>
+                        }
+                      />
+
+                      {reversePrivacyModeEnabled && (
+                        <TextField
+                          fullWidth
+                          label="Placeholder text"
+                          value={reversePrivacyPlaceholderText}
+                          onChange={(e) => setReversePrivacyPlaceholderText(e.target.value)}
+                          helperText="Events will show this text instead of actual details"
+                          size="small"
+                          sx={{
+                            mt: 2,
+                            bgcolor: 'white',
+                            '& .MuiOutlinedInput-root': {
+                              '& fieldset': {
+                                borderColor: '#dadce0',
+                              },
+                              '&:hover fieldset': {
+                                borderColor: '#1967d2',
+                              },
+                            },
+                          }}
+                        />
+                      )}
+                    </Box>
+                  </Card>
+                </Grid>
+              )}
+            </Grid>
+          </form>
+        </DialogContent>
+
+        <DialogActions sx={{ px: 3, pb: 3, pt: 2 }}>
+          <Button
+            onClick={handleClose}
+            sx={{
+              textTransform: 'none',
+              fontSize: '14px',
+              fontWeight: 500,
+              borderRadius: 2,
+              color: '#5f6368',
+              '&:hover': {
+                bgcolor: 'rgba(0, 0, 0, 0.04)',
+              },
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            form="sync-config-form"
+            variant="contained"
+            startIcon={<PlayArrow />}
+            disabled={loading || !sourceCalendarId || !destCalendarId}
+            sx={{
+              textTransform: 'none',
+              fontSize: '14px',
+              fontWeight: 500,
+              borderRadius: 2,
+              px: 3,
+              bgcolor: '#1a73e8',
+              '&:hover': {
+                bgcolor: '#1765cc',
+              },
+              '&:disabled': {
+                bgcolor: '#dadce0',
+                color: '#5f6368',
+              },
+            }}
+          >
+            {loading ? 'Creating...' : 'Create sync'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </>
   );
 }
