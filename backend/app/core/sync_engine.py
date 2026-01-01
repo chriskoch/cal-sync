@@ -251,8 +251,13 @@ class SyncEngine:
         dest_events = fetch_events(service_dst, dest_calendar_id, time_min, time_max)
 
         # Build destination map by source_id
+        # IMPORTANT: Exclude cancelled events so they get recreated if source still exists
         dest_map: Dict[str, dict] = {}
         for ev in dest_events:
+            # Skip cancelled/deleted events - treat them as non-existent
+            if ev.get("status") == "cancelled":
+                continue
+
             shared = ev.get("extendedProperties", {}).get("shared", {})
             src_key = shared.get("source_id")
             if src_key:

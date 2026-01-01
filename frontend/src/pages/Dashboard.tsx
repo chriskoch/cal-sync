@@ -435,7 +435,7 @@ export default function Dashboard() {
                           mb: 2.5,
                         }}
                       >
-                        Events will be synced FROM calendars in this account
+                        Your first connected Google account
                       </Typography>
 
                       {oauthStatus?.source_connected ? (
@@ -559,7 +559,7 @@ export default function Dashboard() {
                           mb: 2.5,
                         }}
                       >
-                        Events will be synced TO calendars in this account
+                        Your second connected Google account
                       </Typography>
 
                       {oauthStatus?.destination_connected ? (

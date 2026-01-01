@@ -226,8 +226,8 @@ def trigger_sync(
         )
 
     # Get credentials
-    source_creds = get_credentials_from_db(str(current_user.id), "source", db)
-    dest_creds = get_credentials_from_db(str(current_user.id), "destination", db)
+    source_creds = get_credentials_from_db(current_user.id, "source", db)
+    dest_creds = get_credentials_from_db(current_user.id, "destination", db)
 
     if not source_creds or not dest_creds:
         raise HTTPException(

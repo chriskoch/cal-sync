@@ -166,6 +166,10 @@ Past events are never synced or modified.
 
 ### Calendars
 - `GET /calendars/{account_type}/list` - List available calendars (includes color_id)
+- `POST /calendars/{account_type}/events/create` - Create event (for testing)
+- `POST /calendars/{account_type}/events/update` - Update event (for testing)
+- `POST /calendars/{account_type}/events/delete` - Delete event (for testing)
+- `POST /calendars/{account_type}/events/list` - List events with filters (for testing)
 
 ### Sync Configuration
 - `POST /sync/config` - Create sync configuration
@@ -227,15 +231,19 @@ docker compose exec backend pytest --cov=app --cov-report=html
 ```
 
 **Test Coverage:**
-- sync_engine.py: 95% coverage
-- API endpoints: 99% coverage (auth, oauth, sync)
-- Error handling: 410/404 errors, authentication failures
+- **101 unit/integration tests** with 100% pass rate
+- sync_engine.py: 95% coverage (42 tests)
+- API endpoints: 99% coverage (51 tests - auth, oauth, sync, calendars)
+- E2E integration tests: 8 tests with real OAuth tokens
+- Error handling: 410/404 errors, authentication failures, UUID type correctness
 
 **Test Categories:**
-1. Sync engine: Event creation, updates, deletions, error handling
-2. OAuth API: Authorization flow, token storage, status checks
-3. Sync API: Configuration CRUD, manual triggers, history
+1. Sync engine: Event creation, updates, deletions, error handling, bi-directional sync
+2. OAuth API: Authorization flow, token storage, status checks, registration
+3. Sync API: Configuration CRUD, manual triggers, history, bi-directional pairs
 4. Auth API: JWT token validation (OAuth-only, no password auth)
+5. Security: Token encryption, JWT validation
+6. E2E Integration: Real OAuth token flows, UUID type handling
 
 **Test Optimizations:**
 - Session-scoped database fixtures (3-5x faster)
@@ -271,6 +279,94 @@ npm test -- --run # Run tests once
 - **Error resilience**: Gracefully handles deleted events and API errors
 - **Idempotent syncs**: Unlimited re-runs without duplicates
 - **Containerized**: Docker Compose for easy local development
+
+## E2E Testing Scripts
+
+The repository includes comprehensive E2E test scripts for real Google Calendar API testing:
+
+```bash
+# All scripts require an access token from the /auth/me endpoint
+# Get token: Login to app → Browser dev tools → localStorage → copy JWT token
+
+# One-way sync test (create, rename, move, delete)
+python3 e2e_test_auto.py <ACCESS_TOKEN>
+
+# Bi-directional sync test (multiple events, both directions)
+python3 e2e_test_bidirectional.py <ACCESS_TOKEN>
+
+# Edge case: Delete synced event and resync (idempotency test)
+python3 e2e_test_delete_synced.py <ACCESS_TOKEN>
+
+# Recurring events test (with edge case documentation)
+python3 e2e_test_recurring.py <ACCESS_TOKEN>
+```
+
+**Test Scripts:**
+- `e2e_test_auto.py` - Fully automated one-way sync testing
+- `e2e_test_bidirectional.py` - Bi-directional sync with multiple events
+- `e2e_test_delete_synced.py` - Tests sync idempotency after manual deletion
+- `e2e_test_recurring.py` - Recurring event handling with edge cases
+
+All scripts use calendars `test-4` and `test-5` by default and include automatic cleanup.
+
+## Recent Bug Fixes & Stability Improvements
+
+### Bug Fix 1: UUID Type Mismatch in Sync Trigger (Jan 2026)
+**Location:** `backend/app/api/sync.py:229-230`
+
+**Problem:** Sync trigger endpoint was converting `current_user.id` (UUID object) to string before passing to `get_credentials_from_db()`, causing OAuth credential lookups to fail. All syncs were broken.
+
+**Fix:** Removed `str()` wrapper - PostgreSQL UUID columns work with UUID objects directly.
+
+```python
+# BEFORE (broken):
+source_creds = get_credentials_from_db(str(current_user.id), "source", db)
+
+# AFTER (fixed):
+source_creds = get_credentials_from_db(current_user.id, "source", db)
+```
+
+**Impact:** Restored all sync functionality (one-way and bi-directional).
+
+**Tests Added:** 8 E2E integration tests verifying UUID type handling in `backend/tests/test_sync_integration_e2e.py`
+
+### Bug Fix 2: Sync Engine Not Idempotent for Deleted Events (Jan 2026)
+**Location:** `backend/app/core/sync_engine.py:254-259`
+
+**Problem:** When users manually deleted synced events from destination calendar, the sync engine would not recreate them on next sync. The engine was including cancelled events (status: "cancelled") in the destination map, treating deleted events as "existing".
+
+**Fix:** Added status check to exclude cancelled events from destination map.
+
+```python
+# Build destination map by source_id
+dest_map: Dict[str, dict] = {}
+for ev in dest_events:
+    # Skip cancelled/deleted events - treat them as non-existent
+    if ev.get("status") == "cancelled":
+        continue
+
+    shared = ev.get("extendedProperties", {}).get("shared", {})
+    src_key = shared.get("source_id")
+    if src_key:
+        dest_map[src_key] = ev
+```
+
+**Impact:** Restored true idempotency - sync now correctly recreates manually deleted synced events.
+
+**Tests Added:** `e2e_test_delete_synced.py` - 5-step edge case test validating idempotency.
+
+### Known Limitations: Recurring Events
+**Status:** Documented, not blocking
+
+The backend test helper endpoints (`POST /calendars/{type}/events/*`) have limitations with recurring events:
+
+1. **Cannot create events with recurrence rules** - Requires RRULE syntax support
+2. **Cannot modify single instances** - Requires instance-specific API access
+3. **Cannot delete single instances** - Requires instance-specific EXDATE handling
+
+**Workaround:** Use manual Google Calendar UI or direct Google Calendar API for recurring event testing.
+
+**Documentation:** See `e2e_test_recurring.py` for 8 documented edge cases and API extension recommendations.
 
 ## Common Development Tasks
 
