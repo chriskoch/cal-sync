@@ -50,7 +50,8 @@ docker compose down
 │   │   ├── components/    # React components
 │   │   ├── pages/         # Page components (Dashboard, Login, Register)
 │   │   ├── services/      # API client
-│   │   └── context/       # React context (AuthContext)
+│   │   ├── context/       # React context (AuthContext)
+│   │   └── constants/     # Shared constants (colors)
 │   └── Dockerfile         # Frontend container
 └── docker-compose.yml     # Multi-container orchestration
 ```
@@ -212,6 +213,12 @@ Past events are never synced or modified.
 - **CalendarSelector**: Dropdown to select source/destination calendars
 - **SyncHistoryDialog**: Modal showing sync execution history
 
+### Shared Constants
+- **colors.ts**: Google Calendar color palette constants
+  - `CALENDAR_COLORS`: Array of 11 event colors with IDs, names, and hex values
+  - `CALENDAR_COLORS_MAP`: Object-indexed version for quick lookups by color ID
+  - Used by Dashboard and SyncConfigForm for consistent color rendering
+
 ### State Management
 - React Context for authentication (AuthContext)
 - Component-level state for sync configurations and UI state
@@ -299,6 +306,12 @@ python3 backend/tests/e2e/e2e_test_delete_synced.py <ACCESS_TOKEN>
 
 # Recurring events test (with edge case documentation)
 python3 backend/tests/e2e/e2e_test_recurring.py <ACCESS_TOKEN>
+
+# Privacy mode test - one-way sync
+python3 backend/tests/e2e/e2e_test_privacy_one_way.py <ACCESS_TOKEN>
+
+# Privacy mode test - bi-directional sync with different placeholders
+python3 backend/tests/e2e/e2e_test_privacy_bidirectional.py <ACCESS_TOKEN>
 ```
 
 **Test Scripts:**
@@ -306,6 +319,8 @@ python3 backend/tests/e2e/e2e_test_recurring.py <ACCESS_TOKEN>
 - `backend/tests/e2e/e2e_test_bidirectional.py` - Bi-directional sync with multiple events
 - `backend/tests/e2e/e2e_test_delete_synced.py` - Tests sync idempotency after manual deletion
 - `backend/tests/e2e/e2e_test_recurring.py` - Recurring event handling with edge cases
+- `backend/tests/e2e/e2e_test_privacy_one_way.py` - Privacy mode validation for one-way sync
+- `backend/tests/e2e/e2e_test_privacy_bidirectional.py` - Privacy mode with different placeholders per direction
 
 All scripts use calendars `test-4` and `test-5` by default and include automatic cleanup.
 
@@ -367,6 +382,42 @@ The backend test helper endpoints (`POST /calendars/{type}/events/*`) have limit
 **Workaround:** Use manual Google Calendar UI or direct Google Calendar API for recurring event testing.
 
 **Documentation:** See `e2e_test_recurring.py` for 8 documented edge cases and API extension recommendations.
+
+## Code Quality Improvements (Jan 2026)
+
+### Improvement 1: Version Number Consistency
+**Location:** `backend/app/main.py`
+
+**Issue:** Version mismatch between FastAPI metadata (0.6.2) and root endpoint response (0.6.1).
+
+**Fix:** Updated root endpoint to return consistent version "0.6.2".
+
+### Improvement 2: Proper Logging in Configuration
+**Location:** `backend/app/config.py`
+
+**Issue:** Using `print()` statement for production warnings instead of structured logging.
+
+**Fix:** Replaced `print()` with `logger.warning()` for proper integration with FastAPI's logging system.
+
+```python
+# BEFORE:
+print("WARNING: Debug mode cannot be enabled in production. Forcing debug=False")
+
+# AFTER:
+logger.warning("Debug mode cannot be enabled in production. Forcing debug=False")
+```
+
+### Improvement 3: Extracted Shared Color Constants
+**Location:** `frontend/src/constants/colors.ts` (new file)
+
+**Issue:** Google Calendar color palette was duplicated in Dashboard.tsx and SyncConfigForm.tsx with different data structures.
+
+**Fix:** Created shared constants file with both array and object-indexed formats:
+- `CALENDAR_COLORS`: Array format for iteration (used by SyncConfigForm)
+- `CALENDAR_COLORS_MAP`: Object format for lookups (used by Dashboard)
+- Eliminates maintenance burden of keeping two color palettes in sync
+
+**Impact:** All frontend tests passing (27/27), cleaner code organization.
 
 ## Common Development Tasks
 

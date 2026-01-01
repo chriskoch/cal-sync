@@ -5,6 +5,36 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0] - 2026-01-02
+
+### Added
+- **Privacy Mode E2E Testing**
+  - New E2E test script: `e2e_test_privacy_one_way.py` - Validates one-way privacy mode (8 steps)
+  - New E2E test script: `e2e_test_privacy_bidirectional.py` - Validates bi-directional privacy with different placeholders (10 steps)
+  - Comprehensive validation of privacy placeholder text, sensitive data removal, and time preservation
+  - Tests privacy maintenance after event updates
+  - Direction-specific privacy settings testing for bi-directional sync
+- **Documentation**
+  - Created `backend/tests/e2e/README.md` with comprehensive E2E test documentation
+  - Updated all .md files with privacy test information and code quality improvements
+
+### Changed
+- **Code Quality Improvements**
+  - Fixed version number consistency (0.7.0 across all endpoints)
+  - Replaced `print()` with proper logging in `backend/app/config.py` for production monitoring
+  - Extracted duplicated color palette to shared constants file (`frontend/src/constants/colors.ts`)
+  - Improved code maintainability by eliminating duplicate color definitions
+- **Project Structure**
+  - Added `frontend/src/constants/` directory for shared constants
+  - Better organization of frontend code
+
+### Improved
+- **Test Coverage**
+  - Total: 128 passing tests (101 backend + 27 frontend)
+  - E2E: 5 comprehensive test scripts with 100% pass rate
+  - All tests verified in Docker environment
+  - Complete privacy mode validation coverage
+
 ## [0.6.2] - 2025-12-20
 
 ### Fixed

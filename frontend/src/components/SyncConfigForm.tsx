@@ -24,25 +24,11 @@ import {
 import { PlayArrow, Circle, Lock, Close, Add } from '@mui/icons-material';
 import CalendarSelector from './CalendarSelector';
 import { syncAPI, SyncConfig } from '../services/api';
+import { CALENDAR_COLORS } from '../constants/colors';
 
 interface SyncConfigFormProps {
   onConfigCreated?: (config: SyncConfig) => void;
 }
-
-// Google Calendar color IDs and their corresponding colors
-const CALENDAR_COLORS = [
-  { id: '1', name: 'Lavender', color: '#7986cb' },
-  { id: '2', name: 'Sage', color: '#33b679' },
-  { id: '3', name: 'Grape', color: '#8e24aa' },
-  { id: '4', name: 'Flamingo', color: '#e67c73' },
-  { id: '5', name: 'Banana', color: '#f6c026' },
-  { id: '6', name: 'Tangerine', color: '#f5511d' },
-  { id: '7', name: 'Peacock', color: '#039be5' },
-  { id: '8', name: 'Graphite', color: '#616161' },
-  { id: '9', name: 'Blueberry', color: '#3f51b5' },
-  { id: '10', name: 'Basil', color: '#0b8043' },
-  { id: '11', name: 'Tomato', color: '#d60000' },
-];
 
 export default function SyncConfigForm({ onConfigCreated }: SyncConfigFormProps) {
   const [open, setOpen] = useState(false);

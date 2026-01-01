@@ -29,7 +29,7 @@ class CreateSyncConfigRequest(BaseModel):
 
     # Privacy mode settings
     privacy_mode_enabled: bool = False
-    privacy_placeholder_text: str = "Personal appointment"
+    privacy_placeholder_text: Optional[str] = None  # Changed to Optional to handle undefined from frontend
 
     # Privacy settings for reverse direction (only if enable_bidirectional=True)
     reverse_privacy_mode_enabled: Optional[bool] = None
@@ -102,31 +102,43 @@ def create_sync_config(
     """Create a new sync configuration with optional bi-directional support."""
     if config_data.enable_bidirectional:
         # Create A→B config
-        config_a_to_b = SyncConfig(
-            user_id=current_user.id,
-            source_calendar_id=config_data.source_calendar_id,
-            dest_calendar_id=config_data.dest_calendar_id,
-            sync_lookahead_days=config_data.sync_lookahead_days,
-            destination_color_id=config_data.destination_color_id,
-            sync_direction="bidirectional_a_to_b",
-            privacy_mode_enabled=config_data.privacy_mode_enabled,
-            privacy_placeholder_text=config_data.privacy_placeholder_text,
-        )
+        config_a_to_b_params = {
+            "user_id": current_user.id,
+            "source_calendar_id": config_data.source_calendar_id,
+            "dest_calendar_id": config_data.dest_calendar_id,
+            "sync_lookahead_days": config_data.sync_lookahead_days,
+            "sync_direction": "bidirectional_a_to_b",
+            "privacy_mode_enabled": config_data.privacy_mode_enabled,
+        }
+        # Only set optional fields if they're not None (to allow database defaults)
+        if config_data.destination_color_id is not None:
+            config_a_to_b_params["destination_color_id"] = config_data.destination_color_id
+        if config_data.privacy_placeholder_text is not None:
+            config_a_to_b_params["privacy_placeholder_text"] = config_data.privacy_placeholder_text
+
+        config_a_to_b = SyncConfig(**config_a_to_b_params)
         db.add(config_a_to_b)
         db.flush()  # Get ID before creating reverse
 
         # Create B→A config (reversed)
-        config_b_to_a = SyncConfig(
-            user_id=current_user.id,
-            source_calendar_id=config_data.dest_calendar_id,  # Reversed
-            dest_calendar_id=config_data.source_calendar_id,  # Reversed
-            sync_lookahead_days=config_data.sync_lookahead_days,
-            destination_color_id=config_data.destination_color_id,
-            sync_direction="bidirectional_b_to_a",
-            paired_config_id=config_a_to_b.id,  # Link to A→B
-            privacy_mode_enabled=config_data.reverse_privacy_mode_enabled if config_data.reverse_privacy_mode_enabled is not None else config_data.privacy_mode_enabled,
-            privacy_placeholder_text=config_data.reverse_privacy_placeholder_text or config_data.privacy_placeholder_text,
-        )
+        config_b_to_a_params = {
+            "user_id": current_user.id,
+            "source_calendar_id": config_data.dest_calendar_id,  # Reversed
+            "dest_calendar_id": config_data.source_calendar_id,  # Reversed
+            "sync_lookahead_days": config_data.sync_lookahead_days,
+            "sync_direction": "bidirectional_b_to_a",
+            "paired_config_id": config_a_to_b.id,  # Link to A→B
+            "privacy_mode_enabled": config_data.reverse_privacy_mode_enabled if config_data.reverse_privacy_mode_enabled is not None else config_data.privacy_mode_enabled,
+        }
+        # Only set optional fields if they're not None
+        if config_data.destination_color_id is not None:
+            config_b_to_a_params["destination_color_id"] = config_data.destination_color_id
+        # For reverse placeholder, use reverse value, fall back to forward value, or use database default
+        reverse_placeholder = config_data.reverse_privacy_placeholder_text or config_data.privacy_placeholder_text
+        if reverse_placeholder is not None:
+            config_b_to_a_params["privacy_placeholder_text"] = reverse_placeholder
+
+        config_b_to_a = SyncConfig(**config_b_to_a_params)
         db.add(config_b_to_a)
         db.flush()
 
@@ -138,16 +150,21 @@ def create_sync_config(
         return config_a_to_b
     else:
         # One-way config (backward compatible)
-        new_config = SyncConfig(
-            user_id=current_user.id,
-            source_calendar_id=config_data.source_calendar_id,
-            dest_calendar_id=config_data.dest_calendar_id,
-            sync_lookahead_days=config_data.sync_lookahead_days,
-            destination_color_id=config_data.destination_color_id,
-            sync_direction="one_way",
-            privacy_mode_enabled=config_data.privacy_mode_enabled,
-            privacy_placeholder_text=config_data.privacy_placeholder_text,
-        )
+        new_config_params = {
+            "user_id": current_user.id,
+            "source_calendar_id": config_data.source_calendar_id,
+            "dest_calendar_id": config_data.dest_calendar_id,
+            "sync_lookahead_days": config_data.sync_lookahead_days,
+            "sync_direction": "one_way",
+            "privacy_mode_enabled": config_data.privacy_mode_enabled,
+        }
+        # Only set optional fields if they're not None (to allow database defaults)
+        if config_data.destination_color_id is not None:
+            new_config_params["destination_color_id"] = config_data.destination_color_id
+        if config_data.privacy_placeholder_text is not None:
+            new_config_params["privacy_placeholder_text"] = config_data.privacy_placeholder_text
+
+        new_config = SyncConfig(**new_config_params)
         db.add(new_config)
         db.commit()
         db.refresh(new_config)

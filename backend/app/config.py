@@ -1,6 +1,9 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import field_validator
 from typing import Optional
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class Settings(BaseSettings):
@@ -52,7 +55,7 @@ class Settings(BaseSettings):
         environment = info.data.get('environment', 'development')
         if environment == 'production' and v is True:
             # Log warning but don't raise - just force False
-            print("WARNING: Debug mode cannot be enabled in production. Forcing debug=False")
+            logger.warning("Debug mode cannot be enabled in production. Forcing debug=False")
             return False
         return v
 
