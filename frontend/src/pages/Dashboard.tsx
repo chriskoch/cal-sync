@@ -37,21 +37,7 @@ import { oauthAPI, OAuthStatus, SyncConfig, syncAPI, calendarsAPI, CalendarItem 
 import SyncConfigForm from '../components/SyncConfigForm';
 import SyncHistoryDialog from '../components/SyncHistoryDialog';
 import ConfirmDialog from '../components/ConfirmDialog';
-
-// Google Calendar color IDs and their corresponding colors
-const CALENDAR_COLORS: { [key: string]: { name: string; color: string } } = {
-  '1': { name: 'Lavender', color: '#7986cb' },
-  '2': { name: 'Sage', color: '#33b679' },
-  '3': { name: 'Grape', color: '#8e24aa' },
-  '4': { name: 'Flamingo', color: '#e67c73' },
-  '5': { name: 'Banana', color: '#f6c026' },
-  '6': { name: 'Tangerine', color: '#f5511d' },
-  '7': { name: 'Peacock', color: '#039be5' },
-  '8': { name: 'Graphite', color: '#616161' },
-  '9': { name: 'Blueberry', color: '#3f51b5' },
-  '10': { name: 'Basil', color: '#0b8043' },
-  '11': { name: 'Tomato', color: '#d60000' },
-};
+import { CALENDAR_COLORS_MAP } from '../constants/colors';
 
 export default function Dashboard() {
   const { user, logout } = useAuth();
@@ -186,10 +172,12 @@ export default function Dashboard() {
           setError('');
           setSuccess('');
           await syncAPI.deleteConfig(configId);
+
+          // Optimistically remove from UI
+          setSyncConfigs(prevConfigs => prevConfigs.filter(c => c.id !== configId));
+
           setConfirmDialogOpen(false);
           setSuccess('Sync deleted successfully!');
-          // Refresh the configs list
-          await fetchSyncConfigs();
         } catch (err: unknown) {
           const error = err as { response?: { data?: { detail?: string } } };
           setError(error.response?.data?.detail || 'Failed to delete sync configuration');
@@ -239,13 +227,19 @@ export default function Dashboard() {
           setDeletingConfig(true);
           setError('');
           setSuccess('');
-          // Delete both configs
+          // Delete both configs (only delete reverse if it exists)
           await syncAPI.deleteConfig(forwardConfigId);
-          await syncAPI.deleteConfig(reverseConfigId);
+          if (reverseConfigId && reverseConfigId !== '') {
+            await syncAPI.deleteConfig(reverseConfigId);
+          }
+
+          // Optimistically remove both from UI
+          setSyncConfigs(prevConfigs =>
+            prevConfigs.filter(c => c.id !== forwardConfigId && c.id !== reverseConfigId)
+          );
+
           setConfirmDialogOpen(false);
           setSuccess('Bi-directional sync deleted successfully!');
-          // Refresh the configs list
-          await fetchSyncConfigs();
         } catch (err: unknown) {
           const error = err as { response?: { data?: { detail?: string } } };
           setError(error.response?.data?.detail || 'Failed to delete sync configuration');
@@ -736,17 +730,17 @@ export default function Dashboard() {
                               {getCalendarDisplayName(forwardConfig.dest_calendar_id)}
                             </Typography>
                             <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                              {forwardConfig.destination_color_id && CALENDAR_COLORS[forwardConfig.destination_color_id] && (
+                              {forwardConfig.destination_color_id && CALENDAR_COLORS_MAP[forwardConfig.destination_color_id] && (
                                 <Chip
                                   icon={
                                     <Circle
                                       sx={{
                                         fontSize: 12,
-                                        color: `${CALENDAR_COLORS[forwardConfig.destination_color_id].color} !important`
+                                        color: `${CALENDAR_COLORS_MAP[forwardConfig.destination_color_id].color} !important`
                                       }}
                                     />
                                   }
-                                  label={CALENDAR_COLORS[forwardConfig.destination_color_id].name}
+                                  label={CALENDAR_COLORS_MAP[forwardConfig.destination_color_id].name}
                                   size="small"
                                   sx={{
                                     height: 24,
@@ -760,7 +754,7 @@ export default function Dashboard() {
                               {forwardConfig.privacy_mode_enabled && (
                                 <Chip
                                   icon={<Lock sx={{ fontSize: 14 }} />}
-                                  label={`Privacy: "${forwardConfig.privacy_placeholder_text}"`}
+                                  label={`Privacy: "${forwardConfig.privacy_placeholder_text || 'Personal appointment'}"`}
                                   size="small"
                                   sx={{
                                     height: 24,
@@ -790,17 +784,17 @@ export default function Dashboard() {
                                 {getCalendarDisplayName(reverseConfig.dest_calendar_id)}
                               </Typography>
                               <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                                {reverseConfig.destination_color_id && CALENDAR_COLORS[reverseConfig.destination_color_id] && (
+                                {reverseConfig.destination_color_id && CALENDAR_COLORS_MAP[reverseConfig.destination_color_id] && (
                                   <Chip
                                     icon={
                                       <Circle
                                         sx={{
                                           fontSize: 12,
-                                          color: `${CALENDAR_COLORS[reverseConfig.destination_color_id].color} !important`
+                                          color: `${CALENDAR_COLORS_MAP[reverseConfig.destination_color_id].color} !important`
                                         }}
                                       />
                                     }
-                                    label={CALENDAR_COLORS[reverseConfig.destination_color_id].name}
+                                    label={CALENDAR_COLORS_MAP[reverseConfig.destination_color_id].name}
                                     size="small"
                                     sx={{
                                       height: 24,
@@ -814,7 +808,7 @@ export default function Dashboard() {
                                 {reverseConfig.privacy_mode_enabled && (
                                   <Chip
                                     icon={<Lock sx={{ fontSize: 14 }} />}
-                                    label={`Privacy: "${reverseConfig.privacy_placeholder_text}"`}
+                                    label={`Privacy: "${reverseConfig.privacy_placeholder_text || 'Personal appointment'}"`}
                                     size="small"
                                     sx={{
                                       height: 24,
@@ -952,17 +946,17 @@ export default function Dashboard() {
                         </Box>
 
                         <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 1.5 }}>
-                          {config.destination_color_id && CALENDAR_COLORS[config.destination_color_id] && (
+                          {config.destination_color_id && CALENDAR_COLORS_MAP[config.destination_color_id] && (
                             <Chip
                               icon={
                                 <Circle
                                   sx={{
                                     fontSize: 12,
-                                    color: `${CALENDAR_COLORS[config.destination_color_id].color} !important`
+                                    color: `${CALENDAR_COLORS_MAP[config.destination_color_id].color} !important`
                                   }}
                                 />
                               }
-                              label={CALENDAR_COLORS[config.destination_color_id].name}
+                              label={CALENDAR_COLORS_MAP[config.destination_color_id].name}
                               size="small"
                               sx={{
                                 height: 24,
@@ -976,7 +970,7 @@ export default function Dashboard() {
                           {config.privacy_mode_enabled && (
                             <Chip
                               icon={<Lock sx={{ fontSize: 14 }} />}
-                              label={`Privacy: "${config.privacy_placeholder_text}"`}
+                              label={`Privacy: "${config.privacy_placeholder_text || 'Personal appointment'}"`}
                               size="small"
                               sx={{
                                 height: 24,

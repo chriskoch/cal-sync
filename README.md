@@ -2,7 +2,7 @@
 
 Bi-directional and one-way synchronization of Google Calendar events between two different Google accounts. Web-based multi-tenant SaaS application with React + Material UI frontend and FastAPI backend.
 
-**✅ Fully tested and stable** - 101 passing tests with comprehensive E2E coverage.
+**✅ Fully tested and stable** - 128 passing tests (101 backend + 27 frontend) with comprehensive E2E coverage (6 test scripts).
 
 > **📋 See [CHANGELOG.md](CHANGELOG.md) for detailed version history and release notes**
 
@@ -261,6 +261,8 @@ cal-sync/
 │   │   │   └── AuthContext.tsx
 │   │   ├── services/
 │   │   │   └── api.ts           # Axios client
+│   │   ├── constants/
+│   │   │   └── colors.ts        # Shared color palette constants
 │   │   ├── theme/
 │   │   │   └── theme.ts         # Material UI theme
 │   │   ├── App.tsx
@@ -326,10 +328,11 @@ Enhanced event metadata for future 2-way sync:
 - ✅ Delete sync configurations
 - ✅ Real-time sync status feedback
 - ✅ Error handling and user notifications
-- ✅ **101 passing tests** - comprehensive unit, integration, and E2E coverage
-- ✅ **Bug fixes** - UUID type handling, idempotency restoration
-- ✅ **E2E test suite** - 4 automated test scripts with real Google Calendar API
+- ✅ **128 passing tests** - comprehensive unit (101 backend + 27 frontend), integration, and E2E coverage
+- ✅ **Bug fixes** - UUID type handling, idempotency restoration, OAuth registration flow
+- ✅ **E2E test suite** - 6 automated test scripts with real Google Calendar API (including privacy mode tests)
 - ✅ Code cleanup and linting setup
+- ✅ **Code quality improvements** - version consistency, proper logging, shared constants
 
 ### To Do (Story 1 - Terraform)
 - ⬜ Terraform modules for production deployment
@@ -385,10 +388,15 @@ docker-compose exec backend pytest --cov=app --cov-report=html  # With coverage
 ```
 
 **Test Coverage:**
-- ✅ 101 unit/integration tests with 100% pass rate
-- 95% coverage on sync_engine.py (42 tests)
-- 99% coverage on API endpoints (51 tests)
-- E2E integration tests with real OAuth tokens (8 tests)
+- ✅ **Backend**: 101 unit/integration tests with 100% pass rate
+  - 95% coverage on sync_engine.py (42 tests)
+  - 99% coverage on API endpoints (51 tests)
+  - E2E integration tests with real OAuth tokens (8 tests)
+- ✅ **Frontend**: 27 tests with 100% pass rate
+  - Component tests with React Testing Library
+  - Context and integration tests
+  - TypeScript type checking
+  - ESLint code quality
 
 **Frontend:**
 ```bash
@@ -405,16 +413,22 @@ Comprehensive E2E test scripts for real Google Calendar API testing:
 # Get token: Login to app → Browser dev tools → localStorage → copy JWT token
 
 # One-way sync: create, rename, move, delete
-python3 e2e_test_auto.py <ACCESS_TOKEN>
+python3 backend/tests/e2e/e2e_test_auto.py <ACCESS_TOKEN>
 
 # Bi-directional sync with multiple events
-python3 e2e_test_bidirectional.py <ACCESS_TOKEN>
+python3 backend/tests/e2e/e2e_test_bidirectional.py <ACCESS_TOKEN>
 
 # Edge case: Delete synced event and resync (idempotency test)
-python3 e2e_test_delete_synced.py <ACCESS_TOKEN>
+python3 backend/tests/e2e/e2e_test_delete_synced.py <ACCESS_TOKEN>
 
 # Recurring events test with edge case documentation
-python3 e2e_test_recurring.py <ACCESS_TOKEN>
+python3 backend/tests/e2e/e2e_test_recurring.py <ACCESS_TOKEN>
+
+# Privacy mode test - one-way sync
+python3 backend/tests/e2e/e2e_test_privacy_one_way.py <ACCESS_TOKEN>
+
+# Privacy mode test - bi-directional sync with different placeholders
+python3 backend/tests/e2e/e2e_test_privacy_bidirectional.py <ACCESS_TOKEN>
 ```
 
 **Test Scripts:**
@@ -422,8 +436,12 @@ python3 e2e_test_recurring.py <ACCESS_TOKEN>
 - `e2e_test_bidirectional.py` - Bi-directional sync with 6 events (4 tests)
 - `e2e_test_delete_synced.py` - Idempotency validation (5-step edge case)
 - `e2e_test_recurring.py` - Recurring event handling with limitations documented
+- `e2e_test_privacy_one_way.py` - Privacy mode validation for one-way sync
+- `e2e_test_privacy_bidirectional.py` - Privacy mode with different placeholders per direction
 
 All scripts use calendars `test-4` and `test-5` by default and include automatic cleanup.
+
+See `backend/tests/e2e/README.md` for comprehensive documentation.
 
 See [CLAUDE.md](CLAUDE.md) for detailed testing documentation and recent bug fixes.
 
