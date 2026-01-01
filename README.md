@@ -271,7 +271,6 @@ cal-sync/
 │   └── tsconfig.json
 ├── docker-compose.yml
 ├── .env.example
-├── legacy/                      # Legacy CLI files (auth.py, sync.py, etc.)
 └── main.tf                      # Legacy Terraform
 ```
 
@@ -347,10 +346,6 @@ Enhanced event metadata for future 2-way sync:
 - ⬜ Sync configuration templates
 - ⬜ Recurring event instance-level operations (modify/delete single occurrences)
 - ⬜ Advanced conflict resolution strategies beyond "origin wins"
-
-### Legacy CLI Files
-
-The original CLI scripts in the `legacy/` directory (`auth.py`, `sync.py`, `test_oauth.py`, `test_sync.py`) are legacy files from the original CLI version. They are preserved for reference but are not used by the web application. The web application uses the code in the `backend/` directory.
 
 ## What Gets Synced
 
