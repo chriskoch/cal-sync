@@ -282,30 +282,30 @@ npm test -- --run # Run tests once
 
 ## E2E Testing Scripts
 
-The repository includes comprehensive E2E test scripts for real Google Calendar API testing:
+The repository includes comprehensive E2E test scripts for real Google Calendar API testing located in `backend/tests/e2e/`:
 
 ```bash
 # All scripts require an access token from the /auth/me endpoint
 # Get token: Login to app → Browser dev tools → localStorage → copy JWT token
 
 # One-way sync test (create, rename, move, delete)
-python3 e2e_test_auto.py <ACCESS_TOKEN>
+python3 backend/tests/e2e/e2e_test_auto.py <ACCESS_TOKEN>
 
 # Bi-directional sync test (multiple events, both directions)
-python3 e2e_test_bidirectional.py <ACCESS_TOKEN>
+python3 backend/tests/e2e/e2e_test_bidirectional.py <ACCESS_TOKEN>
 
 # Edge case: Delete synced event and resync (idempotency test)
-python3 e2e_test_delete_synced.py <ACCESS_TOKEN>
+python3 backend/tests/e2e/e2e_test_delete_synced.py <ACCESS_TOKEN>
 
 # Recurring events test (with edge case documentation)
-python3 e2e_test_recurring.py <ACCESS_TOKEN>
+python3 backend/tests/e2e/e2e_test_recurring.py <ACCESS_TOKEN>
 ```
 
 **Test Scripts:**
-- `e2e_test_auto.py` - Fully automated one-way sync testing
-- `e2e_test_bidirectional.py` - Bi-directional sync with multiple events
-- `e2e_test_delete_synced.py` - Tests sync idempotency after manual deletion
-- `e2e_test_recurring.py` - Recurring event handling with edge cases
+- `backend/tests/e2e/e2e_test_auto.py` - Fully automated one-way sync testing
+- `backend/tests/e2e/e2e_test_bidirectional.py` - Bi-directional sync with multiple events
+- `backend/tests/e2e/e2e_test_delete_synced.py` - Tests sync idempotency after manual deletion
+- `backend/tests/e2e/e2e_test_recurring.py` - Recurring event handling with edge cases
 
 All scripts use calendars `test-4` and `test-5` by default and include automatic cleanup.
 
