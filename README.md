@@ -1,5 +1,9 @@
 # Calendar Sync - Multi-tenant SaaS
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Backend Tests](https://github.com/chriskoch/cal-sync/workflows/Backend%20Tests/badge.svg)](https://github.com/chriskoch/cal-sync/actions)
+[![Frontend Tests](https://github.com/chriskoch/cal-sync/workflows/Frontend%20Tests/badge.svg)](https://github.com/chriskoch/cal-sync/actions)
+
 Bi-directional and one-way synchronization of Google Calendar events between two different Google accounts. Web-based multi-tenant SaaS application with React + Material UI frontend and FastAPI backend.
 
 **✅ Fully tested and stable** - 128 passing tests (101 backend + 27 frontend) with comprehensive E2E coverage (6 test scripts).
@@ -447,11 +451,14 @@ See [CLAUDE.md](CLAUDE.md) for detailed testing documentation and recent bug fix
 
 ## Contributing
 
-1. Create feature branch
-2. Make changes with tests
-3. Run tests and linters
-4. Submit pull request
+We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for:
+- Development environment setup
+- Code style guidelines
+- Testing requirements
+- Pull request process
+
+Read our [Code of Conduct](CODE_OF_CONDUCT.md) before contributing.
 
 ## License
 
-[Add your license here]
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
