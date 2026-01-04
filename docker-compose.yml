@@ -15,45 +15,25 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    restart: unless-stopped
 
-  backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    container_name: cal-sync-backend
+  app:
+    image: ${DOCKER_IMAGE:-cal-sync:latest}
+    container_name: cal-sync-app
+    env_file:
+      - .env           # Safe defaults (committed)
+      - .env.local     # Secrets and overrides (git-ignored, optional)
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-calsync}
-      OAUTH_CLIENT_ID: ${OAUTH_CLIENT_ID}
-      OAUTH_CLIENT_SECRET: ${OAUTH_CLIENT_SECRET}
-      JWT_SECRET: ${JWT_SECRET}
-      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
-      API_URL: http://localhost:8000
-      FRONTEND_URL: http://localhost:3033
-      ENVIRONMENT: development
-      DEBUG: "true"
+      # Override production settings
+      ENVIRONMENT: production
+      DEBUG: "false"
+      # All other variables come from env_file (.env + .env.local)
     ports:
-      - "8000:8000"
+      - "${EXTERNAL_PORT:-8033}:8000"  # External port from .env : Internal port
     depends_on:
       db:
         condition: service_healthy
-    volumes:
-      - ./backend:/app
-    command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
-
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    container_name: cal-sync-frontend
-    environment:
-      VITE_API_URL: http://localhost:8000
-    ports:
-      - "3033:3033"
-    depends_on:
-      - backend
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
+    restart: unless-stopped
 
 volumes:
   postgres_data:
