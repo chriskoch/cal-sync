@@ -20,7 +20,7 @@ class TestStartOAuth:
         """Test starting OAuth flow for source account."""
         mock_create_flow.return_value = mock_oauth_flow
 
-        response = client.get("/oauth/start/source", headers=auth_headers)
+        response = client.get("/api/oauth/start/source", headers=auth_headers)
 
         assert_response_success(response)
         data = response.json()
@@ -33,7 +33,7 @@ class TestStartOAuth:
         """Test starting OAuth flow for destination account."""
         mock_create_flow.return_value = mock_oauth_flow
 
-        response = client.get("/oauth/start/destination", headers=auth_headers)
+        response = client.get("/api/oauth/start/destination", headers=auth_headers)
 
         assert_response_success(response)
         data = response.json()
@@ -41,7 +41,7 @@ class TestStartOAuth:
 
     def test_start_oauth_requires_authentication(self, client):
         """Test OAuth start requires authentication for source/destination."""
-        response = client.get("/oauth/start/source")
+        response = client.get("/api/oauth/start/source")
         assert_response_error(response, status.HTTP_401_UNAUTHORIZED)
 
     @patch('app.api.oauth.create_flow')
@@ -49,7 +49,7 @@ class TestStartOAuth:
         """Test OAuth registration doesn't require authentication."""
         mock_create_flow.return_value = mock_oauth_flow
 
-        response = client.get("/oauth/start/register")
+        response = client.get("/api/oauth/start/register")
 
         assert_response_success(response)
         data = response.json()
@@ -58,7 +58,7 @@ class TestStartOAuth:
     @patch('app.api.oauth.create_flow')
     def test_start_oauth_invalid_account_type(self, mock_create_flow, client, auth_headers):
         """Test OAuth start with invalid account type."""
-        response = client.get("/oauth/start/invalid", headers=auth_headers)
+        response = client.get("/api/oauth/start/invalid", headers=auth_headers)
 
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
@@ -96,7 +96,7 @@ class TestOAuthCallback:
         mock_build.return_value = mock_google_calendar_api
 
         response = client.get(
-            f"/oauth/callback?code=test_code&state={state_token}",
+            f"/api/oauth/callback?code=test_code&state={state_token}",
             follow_redirects=False
         )
 
@@ -155,7 +155,7 @@ class TestOAuthCallback:
         mock_build.return_value = mock_google_calendar_api
 
         response = client.get(
-            f"/oauth/callback?code=new_code&state={state_token}",
+            f"/api/oauth/callback?code=new_code&state={state_token}",
             follow_redirects=False
         )
 
@@ -172,7 +172,7 @@ class TestOAuthCallback:
     def test_oauth_callback_invalid_state(self, client):
         """Test OAuth callback with invalid state token."""
         response = client.get(
-            "/oauth/callback?code=test_code&state=invalid_state",
+            "/api/oauth/callback?code=test_code&state=invalid_state",
             follow_redirects=False
         )
 
@@ -187,7 +187,7 @@ class TestOAuthStatus:
 
     def test_oauth_status_no_connections(self, client, auth_headers, db, test_user):
         """Test status when no OAuth tokens exist."""
-        response = client.get("/oauth/status", headers=auth_headers)
+        response = client.get("/api/oauth/status", headers=auth_headers)
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
@@ -209,7 +209,7 @@ class TestOAuthStatus:
         db.add(source_token)
         db.commit()
 
-        response = client.get("/oauth/status", headers=auth_headers)
+        response = client.get("/api/oauth/status", headers=auth_headers)
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
@@ -240,7 +240,7 @@ class TestOAuthStatus:
         db.add(dest_token)
         db.commit()
 
-        response = client.get("/oauth/status", headers=auth_headers)
+        response = client.get("/api/oauth/status", headers=auth_headers)
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
@@ -251,7 +251,7 @@ class TestOAuthStatus:
 
     def test_oauth_status_requires_authentication(self, client):
         """Test OAuth status requires authentication."""
-        response = client.get("/oauth/status")
+        response = client.get("/api/oauth/status")
 
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
@@ -352,7 +352,7 @@ class TestOAuthRegistration:
         assert existing_user is None
 
         response = client.get(
-            f"/oauth/callback?code=test_code&state={state_token}",
+            f"/api/oauth/callback?code=test_code&state={state_token}",
             follow_redirects=False
         )
 
@@ -413,7 +413,7 @@ class TestOAuthRegistration:
         mock_build.return_value = mock_google_calendar_api
 
         response = client.get(
-            f"/oauth/callback?code=test_code&state={state_token}",
+            f"/api/oauth/callback?code=test_code&state={state_token}",
             follow_redirects=False
         )
 

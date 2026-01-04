@@ -11,7 +11,7 @@ def test_create_one_way_sync_with_privacy_enabled(
 ):
     """Test creating one-way sync with privacy mode enabled."""
     response = client.post(
-        "/sync/config",
+        "/api/sync/config",
         json={
             "source_calendar_id": "source@example.com",
             "dest_calendar_id": "dest@example.com",
@@ -41,7 +41,7 @@ def test_create_one_way_sync_with_privacy_disabled(
 ):
     """Test creating one-way sync with privacy mode disabled."""
     response = client.post(
-        "/sync/config",
+        "/api/sync/config",
         json={
             "source_calendar_id": "source@example.com",
             "dest_calendar_id": "dest@example.com",
@@ -71,7 +71,7 @@ def test_create_bidirectional_sync_with_privacy_both_directions(
 ):
     """Test creating bidirectional sync with privacy enabled in both directions."""
     response = client.post(
-        "/sync/config",
+        "/api/sync/config",
         json={
             "source_calendar_id": "source@example.com",
             "dest_calendar_id": "dest@example.com",
@@ -113,7 +113,7 @@ def test_create_bidirectional_sync_with_privacy_one_direction(
 ):
     """Test creating bidirectional sync with privacy only in forward direction."""
     response = client.post(
-        "/sync/config",
+        "/api/sync/config",
         json={
             "source_calendar_id": "source@example.com",
             "dest_calendar_id": "dest@example.com",
@@ -149,7 +149,7 @@ def test_create_bidirectional_sync_privacy_defaults_to_forward_when_not_specifie
 ):
     """Test that reverse privacy defaults to forward privacy settings when not specified."""
     response = client.post(
-        "/sync/config",
+        "/api/sync/config",
         json={
             "source_calendar_id": "source@example.com",
             "dest_calendar_id": "dest@example.com",
@@ -186,7 +186,7 @@ def test_update_privacy_settings(
     """Test updating privacy settings on an existing sync config."""
     # Create a config first
     response = client.post(
-        "/sync/config",
+        "/api/sync/config",
         json={
             "source_calendar_id": "source@example.com",
             "dest_calendar_id": "dest@example.com",
@@ -201,7 +201,7 @@ def test_update_privacy_settings(
 
     # Update privacy settings
     update_response = client.patch(
-        f"/sync/config/{config_id}",
+        f"/api/sync/config/{config_id}",
         json={
             "privacy_mode_enabled": True,
             "privacy_placeholder_text": "Out of office",
@@ -229,7 +229,7 @@ def test_privacy_placeholder_text_persists_when_mode_disabled(
     """Test that privacy placeholder text is preserved even when privacy mode is disabled."""
     # Create config with privacy enabled
     response = client.post(
-        "/sync/config",
+        "/api/sync/config",
         json={
             "source_calendar_id": "source@example.com",
             "dest_calendar_id": "dest@example.com",
@@ -245,7 +245,7 @@ def test_privacy_placeholder_text_persists_when_mode_disabled(
 
     # Disable privacy mode
     update_response = client.patch(
-        f"/sync/config/{config_id}",
+        f"/api/sync/config/{config_id}",
         json={
             "privacy_mode_enabled": False,
         },

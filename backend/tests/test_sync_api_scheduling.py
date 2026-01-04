@@ -29,7 +29,7 @@ class TestCreateSyncConfigWithScheduling:
             "auto_sync_timezone": "UTC"
         }
 
-        response = client.post("/sync/config", json=payload, headers=auth_headers)
+        response = client.post("/api/sync/config", json=payload, headers=auth_headers)
 
         assert response.status_code == status.HTTP_201_CREATED
         data = response.json()
@@ -56,7 +56,7 @@ class TestCreateSyncConfigWithScheduling:
             "auto_sync_enabled": False
         }
 
-        response = client.post("/sync/config", json=payload, headers=auth_headers)
+        response = client.post("/api/sync/config", json=payload, headers=auth_headers)
 
         assert response.status_code == status.HTTP_201_CREATED
         data = response.json()
@@ -75,7 +75,7 @@ class TestCreateSyncConfigWithScheduling:
             "auto_sync_timezone": "UTC"
         }
 
-        response = client.post("/sync/config", json=payload, headers=auth_headers)
+        response = client.post("/api/sync/config", json=payload, headers=auth_headers)
 
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
         assert "cron" in response.text.lower()
@@ -90,7 +90,7 @@ class TestCreateSyncConfigWithScheduling:
             "auto_sync_timezone": "Invalid/Timezone"
         }
 
-        response = client.post("/sync/config", json=payload, headers=auth_headers)
+        response = client.post("/api/sync/config", json=payload, headers=auth_headers)
 
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
         assert "timezone" in response.text.lower()
@@ -105,7 +105,7 @@ class TestCreateSyncConfigWithScheduling:
             "auto_sync_timezone": "UTC"
         }
 
-        response = client.post("/sync/config", json=payload, headers=auth_headers)
+        response = client.post("/api/sync/config", json=payload, headers=auth_headers)
 
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
@@ -124,7 +124,7 @@ class TestCreateSyncConfigWithScheduling:
             "auto_sync_timezone": "America/New_York"
         }
 
-        response = client.post("/sync/config", json=payload, headers=auth_headers)
+        response = client.post("/api/sync/config", json=payload, headers=auth_headers)
 
         assert response.status_code == status.HTTP_201_CREATED
         data = response.json()
@@ -157,7 +157,7 @@ class TestCreateSyncConfigWithScheduling:
                 "auto_sync_timezone": tz
             }
 
-            response = client.post("/sync/config", json=payload, headers=auth_headers)
+            response = client.post("/api/sync/config", json=payload, headers=auth_headers)
 
             assert response.status_code == status.HTTP_201_CREATED
             data = response.json()
@@ -193,7 +193,7 @@ class TestUpdateSyncConfigWithScheduling:
             "auto_sync_timezone": "America/New_York"
         }
 
-        response = client.patch(f"/sync/config/{config.id}", json=payload, headers=auth_headers)
+        response = client.patch(f"/api/sync/config/{config.id}", json=payload, headers=auth_headers)
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
@@ -228,7 +228,7 @@ class TestUpdateSyncConfigWithScheduling:
             "auto_sync_enabled": False
         }
 
-        response = client.patch(f"/sync/config/{config.id}", json=payload, headers=auth_headers)
+        response = client.patch(f"/api/sync/config/{config.id}", json=payload, headers=auth_headers)
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
@@ -262,7 +262,7 @@ class TestUpdateSyncConfigWithScheduling:
             "auto_sync_cron": "0 0 * * *"  # Daily instead of every 6 hours
         }
 
-        response = client.patch(f"/sync/config/{config.id}", json=payload, headers=auth_headers)
+        response = client.patch(f"/api/sync/config/{config.id}", json=payload, headers=auth_headers)
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
@@ -296,7 +296,7 @@ class TestUpdateSyncConfigWithScheduling:
             "auto_sync_timezone": "America/New_York"
         }
 
-        response = client.patch(f"/sync/config/{config.id}", json=payload, headers=auth_headers)
+        response = client.patch(f"/api/sync/config/{config.id}", json=payload, headers=auth_headers)
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
@@ -331,7 +331,7 @@ class TestUpdateSyncConfigWithScheduling:
             "is_active": False
         }
 
-        response = client.patch(f"/sync/config/{config.id}", json=payload, headers=auth_headers)
+        response = client.patch(f"/api/sync/config/{config.id}", json=payload, headers=auth_headers)
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
@@ -358,7 +358,7 @@ class TestUpdateSyncConfigWithScheduling:
             "auto_sync_cron": "invalid"
         }
 
-        response = client.patch(f"/sync/config/{config.id}", json=payload, headers=auth_headers)
+        response = client.patch(f"/api/sync/config/{config.id}", json=payload, headers=auth_headers)
 
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
@@ -387,7 +387,7 @@ class TestDeleteSyncConfigWithScheduling:
         mock_scheduler = Mock()
         mock_get_scheduler.return_value = mock_scheduler
 
-        response = client.delete(f"/sync/config/{config.id}", headers=auth_headers)
+        response = client.delete(f"/api/sync/config/{config.id}", headers=auth_headers)
 
         assert response.status_code == status.HTTP_204_NO_CONTENT
 
@@ -414,7 +414,7 @@ class TestDeleteSyncConfigWithScheduling:
         mock_scheduler = Mock()
         mock_get_scheduler.return_value = mock_scheduler
 
-        response = client.delete(f"/sync/config/{config.id}", headers=auth_headers)
+        response = client.delete(f"/api/sync/config/{config.id}", headers=auth_headers)
 
         assert response.status_code == status.HTTP_204_NO_CONTENT
 
@@ -442,7 +442,7 @@ class TestSyncConfigResponseFormat:
         db.add(config)
         db.commit()
 
-        response = client.get("/sync/config", headers=auth_headers)
+        response = client.get("/api/sync/config", headers=auth_headers)
 
         assert response.status_code == status.HTTP_200_OK
         configs = response.json()
@@ -464,7 +464,7 @@ class TestSyncConfigResponseFormat:
             # Not providing auto-sync fields
         }
 
-        response = client.post("/sync/config", json=payload, headers=auth_headers)
+        response = client.post("/api/sync/config", json=payload, headers=auth_headers)
 
         assert response.status_code == status.HTTP_201_CREATED
         data = response.json()

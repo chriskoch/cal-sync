@@ -15,7 +15,7 @@ Base.metadata.create_all(bind=engine)
 app = FastAPI(
     title="Calendar Sync API",
     description="Multi-tenant SaaS for syncing Google Calendar events",
-    version="0.7.1",
+    version="0.8.0",
     debug=settings.debug,
 )
 
@@ -50,7 +50,7 @@ async def read_root():
     if os.path.exists(index_path):
         return FileResponse(index_path)
     # Fallback to API info if static files don't exist (development mode)
-    return {"message": "Calendar Sync API", "version": "0.7.1"}
+    return {"message": "Calendar Sync API", "version": "0.8.0"}
 
 
 @app.get("/health")

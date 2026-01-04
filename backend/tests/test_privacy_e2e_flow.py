@@ -15,7 +15,7 @@ def test_privacy_settings_full_user_flow(
     """
     # Step 1: Create sync config with privacy enabled
     create_response = client.post(
-        "/sync/config",
+        "/api/sync/config",
         json={
             "source_calendar_id": "business@example.com",
             "dest_calendar_id": "personal@example.com",
@@ -39,7 +39,7 @@ def test_privacy_settings_full_user_flow(
     assert created_config["privacy_placeholder_text"] == "Busy - Work", "Privacy placeholder should be in create response"
 
     # Step 2: List configs (this is what Dashboard does after creation)
-    list_response = client.get("/sync/config", headers=auth_headers)
+    list_response = client.get("/api/sync/config", headers=auth_headers)
 
     assert list_response.status_code == 200
     configs = list_response.json()
@@ -73,7 +73,7 @@ def test_bidirectional_with_only_forward_privacy_enabled(
     """
     # Create bidirectional sync with privacy only on forward direction
     create_response = client.post(
-        "/sync/config",
+        "/api/sync/config",
         json={
             "source_calendar_id": "business@example.com",
             "dest_calendar_id": "personal@example.com",
@@ -99,7 +99,7 @@ def test_bidirectional_with_only_forward_privacy_enabled(
     assert forward_config["privacy_placeholder_text"] == "Work Meeting"
 
     # List configs to get both
-    list_response = client.get("/sync/config", headers=auth_headers)
+    list_response = client.get("/api/sync/config", headers=auth_headers)
     assert list_response.status_code == 200
     configs = list_response.json()
 
@@ -129,7 +129,7 @@ def test_bidirectional_privacy_settings_full_user_flow(
     """
     # Create bidirectional sync with privacy
     create_response = client.post(
-        "/sync/config",
+        "/api/sync/config",
         json={
             "source_calendar_id": "business@example.com",
             "dest_calendar_id": "personal@example.com",
@@ -157,7 +157,7 @@ def test_bidirectional_privacy_settings_full_user_flow(
     assert forward_config["privacy_placeholder_text"] == "Work Meeting"
 
     # List configs to get both forward and reverse
-    list_response = client.get("/sync/config", headers=auth_headers)
+    list_response = client.get("/api/sync/config", headers=auth_headers)
     assert list_response.status_code == 200
     configs = list_response.json()
 
