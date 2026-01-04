@@ -9,6 +9,8 @@ Bi-directional and one-way synchronization of Google Calendar events between two
 **✅ Fully tested and stable** - 128 passing tests (101 backend + 27 frontend) with comprehensive E2E coverage (6 test scripts).
 
 > **📋 See [CHANGELOG.md](CHANGELOG.md) for detailed version history and release notes**
+>
+> **🚀 New to Calendar Sync? Start with [INSTALL.md](INSTALL.md) for a beginner-friendly setup guide!**
 
 ## How it works
 
