@@ -5,6 +5,36 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.1] - 2026-01-04
+
+### Added
+- **Open Source Preparation**
+  - MIT License with copyright
+  - Comprehensive CONTRIBUTING.md with development workflow and PR process
+  - CODE_OF_CONDUCT.md using Contributor Covenant v2.1
+  - GitHub issue templates (bug reports, feature requests)
+  - GitHub pull request template with testing checklist
+  - GitHub Actions CI/CD workflows for automated testing
+    - Backend tests workflow (pytest with PostgreSQL service)
+    - Frontend tests workflow (Vitest, ESLint, TypeScript)
+  - Security disclosure process in SECURITY.md
+  - README badges for license and CI/CD status
+
+### Changed
+- **Infrastructure**
+  - Removed GCP Terraform deployment files (focus on Docker-only development)
+  - Updated .env.example with Docker Compose defaults
+  - Removed competitors analysis file (internal documentation)
+- **Documentation**
+  - Enhanced README with contributing section and OSS badges
+  - Updated SECURITY.md with responsible disclosure email
+  - Improved .env.example with better Docker defaults
+
+### Removed
+- GCP Terraform configuration (main.tf)
+- Terraform state files and .terraform directory
+- competitors-features.md (internal competitive analysis)
+
 ## [0.7.0] - 2026-01-02
 
 ### Added
