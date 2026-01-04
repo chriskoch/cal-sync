@@ -105,7 +105,7 @@ def start_oauth(
                 detail="Authentication required",
             )
     
-    redirect_uri = f"{settings.api_url}/oauth/callback"
+    redirect_uri = f"{settings.api_url}/api/oauth/callback"
     flow = create_flow(redirect_uri)
 
     # Generate state token with user_id and account_type
@@ -150,7 +150,7 @@ def oauth_callback(code: str, state: str, db: Session = Depends(get_db)):
     user_id = state_data.get("user_id")  # May not exist for registration
 
     # Exchange code for tokens
-    redirect_uri = f"{settings.api_url}/oauth/callback"
+    redirect_uri = f"{settings.api_url}/api/oauth/callback"
     flow = create_flow(redirect_uri)
     flow.fetch_token(code=code)
 

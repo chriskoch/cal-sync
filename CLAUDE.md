@@ -14,22 +14,125 @@ Full-stack web application that synchronizes Google Calendar events between mult
 
 ## Development Commands
 
+### Local Development (Recommended)
+
+**One-command launch:**
 ```bash
-# Start all services (PostgreSQL, backend, frontend)
-docker compose up
+./dev.sh
+```
 
-# Run backend tests
-docker compose exec backend pytest
+Automatically handles:
+- PostgreSQL startup (Docker)
+- Python venv creation and dependency installation
+- Database migrations
+- Backend server (port 8000) with hot-reload
+- Frontend server (port 3033) with hot-reload
+- Graceful shutdown with Ctrl+C
 
-# Run database migrations
+### Docker Deployment
+
+```bash
+# Build and start unified container
+docker build -t cal-sync:latest .
+docker compose up -d
+
+# Access at http://localhost:8033
+```
+
+### Database Migrations
+
+```bash
+# Run migrations (if using docker compose)
 docker compose exec backend alembic upgrade head
 
 # Create new migration
 docker compose exec backend alembic revision --autogenerate -m "description"
+```
+
+### Testing
+
+```bash
+# Run backend tests
+docker compose exec backend pytest
 
 # Stop all services
 docker compose down
 ```
+
+## Port Configuration
+
+The application supports two deployment modes with different port configurations:
+
+### Docker Deployment (Production/Testing)
+
+**Default Port:** 8033 (unified frontend + backend)
+
+- **Access Points:**
+  - Web App: `http://localhost:8033`
+  - API Docs: `http://localhost:8033/docs`
+  - Health Check: `http://localhost:8033/api/health`
+
+- **Configuration:** Defined in `.env` file:
+  ```bash
+  EXTERNAL_PORT=8033
+  API_URL=http://localhost:8033
+  FRONTEND_URL=http://localhost:8033
+  ```
+
+- **Architecture:** Multi-stage Docker build
+  - Stage 1: Frontend built with Node 20 Alpine
+  - Stage 2: Backend serves both API (`/api/*`) and static frontend files
+  - Single container exposed on port 8033 (external) → 8000 (internal)
+
+- **To Change Port:**
+  1. Edit `.env` file (all three values grouped together)
+  2. Update Google OAuth redirect URI in Google Cloud Console
+  3. Restart: `docker compose down && docker compose up -d`
+
+### Local Development (Hot-Reload)
+
+**Ports:** Separate backend (8000) and frontend (3033)
+
+- **Access Points:**
+  - Frontend Dev Server: `http://localhost:3033`
+  - Backend API: `http://localhost:8000`
+  - API Docs: `http://localhost:8000/docs`
+  - Database: `localhost:5433` (PostgreSQL)
+
+- **Configuration:** Override in `.env.local`:
+  ```bash
+  API_URL=http://localhost:8000
+  FRONTEND_URL=http://localhost:3033
+  DATABASE_URL=postgresql://postgres:dev@localhost:5433/calsync
+  ```
+
+- **Frontend:** Also needs `frontend/.env`:
+  ```bash
+  VITE_API_URL=http://localhost:8000/api
+  ```
+
+- **Benefits:**
+  - Hot-reload for both backend (uvicorn `--reload`) and frontend (Vite HMR)
+  - No Docker overhead for app containers
+  - Full IDE integration and debugging
+  - Faster iteration cycle
+
+### OAuth Redirect URI Configuration
+
+**CRITICAL:** OAuth redirect URI must match the deployment mode:
+
+- **Docker (port 8033):** `http://localhost:8033/api/oauth/callback`
+- **Local Dev (port 8000):** `http://localhost:8000/api/oauth/callback`
+- **Production:** `https://yourdomain.com/api/oauth/callback`
+
+Configure in Google Cloud Console → APIs & Services → Credentials → OAuth client ID → Authorized redirect URIs.
+
+### Port Configuration Files
+
+- **`backend/app/config.py`**: Defaults for local development (8000/3033)
+- **`.env`** (committed): Defaults for Docker deployment (8033)
+- **`.env.local`** (git-ignored): User secrets and local overrides
+- **`docker-compose.yml`**: Uses `${EXTERNAL_PORT:-8033}` from `.env`
 
 ## Architecture
 
@@ -199,9 +302,9 @@ Located in [backend/app/core/scheduler.py](backend/app/core/scheduler.py).
    - `validate_timezone(timezone_str)`: Validates IANA timezone strings
 
 **API Integration:**
-- `POST /sync/config`: Creates config + schedules job if auto_sync_enabled=True
-- `PATCH /sync/config/{id}`: Updates config + reschedules job if cron/timezone changed
-- `DELETE /sync/config/{id}`: Deletes config + removes scheduled job
+- `POST /api/sync/config`: Creates config + schedules job if auto_sync_enabled=True
+- `PATCH /api/sync/config/{id}`: Updates config + reschedules job if cron/timezone changed
+- `DELETE /api/sync/config/{id}`: Deletes config + removes scheduled job
 - Pydantic validators ensure valid cron expressions and timezones before database commit
 
 **Database Fields:**
@@ -232,30 +335,31 @@ Located in [backend/app/core/scheduler.py](backend/app/core/scheduler.py).
 ## API Endpoints
 
 ### Authentication
-- `GET /auth/me` - Get current user info
+- `GET /api/auth/me` - Get current user info
 
 ### OAuth
-- `GET /oauth/start/{account_type}` - Initiate OAuth flow
+- `GET /api/oauth/start/{account_type}` - Initiate OAuth flow
   - `account_type`: "register" (no auth required), "source" (auth required), "destination" (auth required)
   - For "register": Creates user + source OAuth token, returns JWT via redirect
-- `GET /oauth/callback` - OAuth callback handler
+- `GET /api/oauth/callback` - OAuth callback handler
   - Handles registration (creates user + source token) or connects source/destination
   - For registration: Generates JWT and redirects to frontend with token in URL
-- `GET /oauth/status` - Check OAuth connection status
+  - **Redirect URI for Google OAuth:** `http://localhost:8033/api/oauth/callback`
+- `GET /api/oauth/status` - Check OAuth connection status
 
 ### Calendars
-- `GET /calendars/{account_type}/list` - List available calendars (includes color_id)
-- `POST /calendars/{account_type}/events/create` - Create event (for testing)
-- `POST /calendars/{account_type}/events/update` - Update event (for testing)
-- `POST /calendars/{account_type}/events/delete` - Delete event (for testing)
-- `POST /calendars/{account_type}/events/list` - List events with filters (for testing)
+- `GET /api/calendars/{account_type}/list` - List available calendars (includes color_id)
+- `POST /api/calendars/{account_type}/events/create` - Create event (for testing)
+- `POST /api/calendars/{account_type}/events/update` - Update event (for testing)
+- `POST /api/calendars/{account_type}/events/delete` - Delete event (for testing)
+- `POST /api/calendars/{account_type}/events/list` - List events with filters (for testing)
 
 ### Sync Configuration
-- `POST /sync/config` - Create sync configuration
-- `GET /sync/config` - List user's sync configurations
-- `DELETE /sync/config/{config_id}` - Delete sync configuration
-- `POST /sync/trigger/{config_id}` - Manually trigger sync
-- `GET /sync/logs/{config_id}` - Get sync history
+- `POST /api/sync/config` - Create sync configuration
+- `GET /api/sync/config` - List user's sync configurations
+- `DELETE /api/sync/config/{config_id}` - Delete sync configuration
+- `POST /api/sync/trigger/{config_id}` - Manually trigger sync
+- `GET /api/sync/logs/{config_id}` - Get sync history
 
 ## Database Models
 
@@ -375,7 +479,7 @@ npm test -- --run # Run tests once
 The repository includes comprehensive E2E test scripts for real Google Calendar API testing located in `backend/tests/e2e/`:
 
 ```bash
-# All scripts require an access token from the /auth/me endpoint
+# All scripts require an access token from the /api/auth/me endpoint
 # Get token: Login to app → Browser dev tools → localStorage → copy JWT token
 
 # One-way sync test (create, rename, move, delete)
@@ -456,7 +560,7 @@ for ev in dest_events:
 ### Known Limitations: Recurring Events
 **Status:** Documented, not blocking
 
-The backend test helper endpoints (`POST /calendars/{type}/events/*`) have limitations with recurring events:
+The backend test helper endpoints (`POST /api/calendars/{type}/events/*`) have limitations with recurring events:
 
 1. **Cannot create events with recurrence rules** - Requires RRULE syntax support
 2. **Cannot modify single instances** - Requires instance-specific API access
@@ -528,7 +632,7 @@ logger.warning("Debug mode cannot be enabled in production. Forcing debug=False"
 1. Check sync logs in UI (Dashboard → View History)
 2. Check database: `docker compose exec db psql -U postgres -d calsync`
 3. Check backend logs: `docker compose logs backend`
-4. Verify OAuth tokens are valid via `/oauth/status` endpoint
+4. Verify OAuth tokens are valid via `/api/oauth/status` endpoint
 5. Check event extended properties for `source_id`
 
 ### Code Quality

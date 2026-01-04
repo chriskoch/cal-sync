@@ -29,7 +29,8 @@ class Settings(BaseSettings):
     jwt_access_token_expire_minutes: int = 30
     encryption_key: str  # Fernet key for OAuth token encryption
 
-    # API URLs
+    # API URLs (defaults for local development)
+    # For Docker deployment, these are overridden by .env file
     api_url: str = "http://localhost:8000"
     frontend_url: str = "http://localhost:3033"
 
