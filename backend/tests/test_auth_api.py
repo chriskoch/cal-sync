@@ -12,7 +12,7 @@ class TestGetCurrentUser:
 
     def test_get_current_user_authenticated(self, client, test_user, auth_headers):
         """Test getting current user when authenticated."""
-        response = client.get("/auth/me", headers=auth_headers)
+        response = client.get("/api/auth/me", headers=auth_headers)
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
@@ -23,14 +23,14 @@ class TestGetCurrentUser:
 
     def test_get_current_user_no_token(self, client):
         """Test getting current user without token fails."""
-        response = client.get("/auth/me")
+        response = client.get("/api/auth/me")
 
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
     def test_get_current_user_invalid_token(self, client):
         """Test getting current user with invalid token fails."""
         response = client.get(
-            "/auth/me",
+            "/api/auth/me",
             headers={"Authorization": "Bearer invalid_token"}
         )
 
@@ -39,7 +39,7 @@ class TestGetCurrentUser:
     def test_get_current_user_malformed_header(self, client):
         """Test getting current user with malformed auth header fails."""
         response = client.get(
-            "/auth/me",
+            "/api/auth/me",
             headers={"Authorization": "NotBearer token"}
         )
 

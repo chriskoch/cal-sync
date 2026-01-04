@@ -101,7 +101,7 @@ class TestSyncIntegrationE2E:
 
         # Trigger sync - this should retrieve credentials using UUID
         response = client.post(
-            f"/sync/trigger/{sync_config.id}",
+            f"/api/sync/trigger/{sync_config.id}",
             headers=auth_headers
         )
 
@@ -170,7 +170,7 @@ class TestSyncIntegrationE2E:
 
         # Trigger both directions
         response = client.post(
-            f"/sync/trigger/{config_a_to_b.id}?trigger_both_directions=true",
+            f"/api/sync/trigger/{config_a_to_b.id}?trigger_both_directions=true",
             headers=auth_headers
         )
 
@@ -218,7 +218,7 @@ class TestSyncIntegrationE2E:
 
         # Attempt to trigger sync - should fail due to missing credentials
         response = client.post(
-            f"/sync/trigger/{sync_config.id}",
+            f"/api/sync/trigger/{sync_config.id}",
             headers=auth_headers
         )
 
@@ -252,7 +252,7 @@ class TestSyncIntegrationE2E:
 
         # Attempt to trigger sync - should fail due to missing destination credentials
         response = client.post(
-            f"/sync/trigger/{sync_config.id}",
+            f"/api/sync/trigger/{sync_config.id}",
             headers=auth_headers
         )
 
@@ -286,7 +286,7 @@ class TestSyncIntegrationE2E:
 
         # Attempt to trigger sync - should fail due to missing source credentials
         response = client.post(
-            f"/sync/trigger/{sync_config.id}",
+            f"/api/sync/trigger/{sync_config.id}",
             headers=auth_headers
         )
 
@@ -341,7 +341,7 @@ class TestSyncIntegrationE2E:
 
         # This should work because current_user.id is UUID (not string)
         response = client.post(
-            f"/sync/trigger/{sync_config.id}",
+            f"/api/sync/trigger/{sync_config.id}",
             headers=auth_headers
         )
 

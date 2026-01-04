@@ -30,3 +30,4 @@ frontend/.env
 # Dev script logs
 backend.log
 frontend.log
+backend/.env

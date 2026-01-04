@@ -25,7 +25,7 @@ class TestCreateSyncConfig:
             "enable_bidirectional": False,
         }
 
-        response = client.post("/sync/config", json=payload, headers=auth_headers)
+        response = client.post("/api/sync/config", json=payload, headers=auth_headers)
 
         assert_response_success(response, status.HTTP_201_CREATED)
         data = response.json()
@@ -57,7 +57,7 @@ class TestCreateSyncConfig:
             "privacy_mode_enabled": False,
         }
 
-        response = client.post("/sync/config", json=payload, headers=auth_headers)
+        response = client.post("/api/sync/config", json=payload, headers=auth_headers)
 
         assert_response_success(response, status.HTTP_201_CREATED)
         data = response.json()
@@ -101,7 +101,7 @@ class TestCreateSyncConfig:
             "reverse_privacy_mode_enabled": False,
         }
 
-        response = client.post("/sync/config", json=payload, headers=auth_headers)
+        response = client.post("/api/sync/config", json=payload, headers=auth_headers)
 
         assert_response_success(response, status.HTTP_201_CREATED)
         data = response.json()
@@ -138,7 +138,7 @@ class TestCreateSyncConfig:
             "reverse_privacy_placeholder_text": "Personal appointment",
         }
 
-        response = client.post("/sync/config", json=payload, headers=auth_headers)
+        response = client.post("/api/sync/config", json=payload, headers=auth_headers)
 
         assert_response_success(response, status.HTTP_201_CREATED)
 
@@ -163,7 +163,7 @@ class TestCreateSyncConfig:
             "dest_calendar_id": "dest@example.com",
         }
 
-        response = client.post("/sync/config", json=payload)
+        response = client.post("/api/sync/config", json=payload)
         assert_response_error(response, status.HTTP_401_UNAUTHORIZED)
 
     # Removed test - API doesn't currently validate same calendars (allowed edge case)
@@ -194,7 +194,7 @@ class TestUpdateSyncConfig:
         }
 
         response = client.patch(
-            f"/sync/config/{sync_config.id}",
+            f"/api/sync/config/{sync_config.id}",
             json=payload,
             headers=auth_headers
         )
@@ -226,7 +226,7 @@ class TestUpdateSyncConfig:
         payload = {"is_active": False}
 
         response = client.patch(
-            f"/sync/config/{sync_config.id}",
+            f"/api/sync/config/{sync_config.id}",
             json=payload,
             headers=auth_headers
         )
@@ -241,7 +241,7 @@ class TestUpdateSyncConfig:
 
         payload = {"privacy_mode_enabled": True}
         response = client.patch(
-            f"/sync/config/{uuid4()}",
+            f"/api/sync/config/{uuid4()}",
             json=payload,
             headers=auth_headers
         )
@@ -270,7 +270,7 @@ class TestUpdateSyncConfig:
         # Try to update as test_user
         payload = {"privacy_mode_enabled": True}
         response = client.patch(
-            f"/sync/config/{sync_config.id}",
+            f"/api/sync/config/{sync_config.id}",
             json=payload,
             headers=auth_headers
         )
@@ -302,7 +302,7 @@ class TestTriggerSync:
         db.commit()
 
         response = client.post(
-            f"/sync/trigger/{sync_config.id}",
+            f"/api/sync/trigger/{sync_config.id}",
             headers=auth_headers
         )
 
@@ -359,7 +359,7 @@ class TestTriggerSync:
 
         # Trigger both directions
         response = client.post(
-            f"/sync/trigger/{config_a_to_b.id}?trigger_both_directions=true",
+            f"/api/sync/trigger/{config_a_to_b.id}?trigger_both_directions=true",
             headers=auth_headers
         )
 
@@ -416,7 +416,7 @@ class TestTriggerSync:
 
         # Trigger single direction only (default)
         response = client.post(
-            f"/sync/trigger/{config_a_to_b.id}",
+            f"/api/sync/trigger/{config_a_to_b.id}",
             headers=auth_headers
         )
 
@@ -442,7 +442,7 @@ class TestTriggerSync:
         db.commit()
 
         response = client.post(
-            f"/sync/trigger/{sync_config.id}",
+            f"/api/sync/trigger/{sync_config.id}",
             headers=auth_headers
         )
 
@@ -462,7 +462,7 @@ class TestTriggerSync:
         db.commit()
 
         response = client.post(
-            f"/sync/trigger/{sync_config.id}",
+            f"/api/sync/trigger/{sync_config.id}",
             headers=auth_headers
         )
 
@@ -494,7 +494,7 @@ class TestListSyncConfigs:
         db.add_all([config1, config2])
         db.commit()
 
-        response = client.get("/sync/config", headers=auth_headers)
+        response = client.get("/api/sync/config", headers=auth_headers)
 
         assert_response_success(response, status.HTTP_200_OK)
         data = response.json()
@@ -530,7 +530,7 @@ class TestListSyncConfigs:
         config_a_to_b.paired_config_id = config_b_to_a.id
         db.commit()
 
-        response = client.get("/sync/config", headers=auth_headers)
+        response = client.get("/api/sync/config", headers=auth_headers)
 
         assert_response_success(response, status.HTTP_200_OK)
         data = response.json()
@@ -572,7 +572,7 @@ class TestListSyncConfigs:
         db.add(my_config)
         db.commit()
 
-        response = client.get("/sync/config", headers=auth_headers)
+        response = client.get("/api/sync/config", headers=auth_headers)
 
         assert_response_success(response, status.HTTP_200_OK)
         data = response.json()
@@ -599,7 +599,7 @@ class TestDeleteSyncConfig:
         db.commit()
 
         response = client.delete(
-            f"/sync/config/{sync_config.id}",
+            f"/api/sync/config/{sync_config.id}",
             headers=auth_headers
         )
 
@@ -640,7 +640,7 @@ class TestDeleteSyncConfig:
 
         # Delete forward config
         response = client.delete(
-            f"/sync/config/{config_a_to_b.id}",
+            f"/api/sync/config/{config_a_to_b.id}",
             headers=auth_headers
         )
 
@@ -661,7 +661,7 @@ class TestDeleteSyncConfig:
         from uuid import uuid4
 
         response = client.delete(
-            f"/sync/config/{uuid4()}",
+            f"/api/sync/config/{uuid4()}",
             headers=auth_headers
         )
 
@@ -688,7 +688,7 @@ class TestDeleteSyncConfig:
 
         # Try to delete as test_user
         response = client.delete(
-            f"/sync/config/{sync_config.id}",
+            f"/api/sync/config/{sync_config.id}",
             headers=auth_headers
         )
 
