@@ -133,12 +133,19 @@ If secrets are compromised:
 - Review access logs weekly
 - Test authentication flows after updates
 
-## Reporting Security Issues
+## Reporting Security Vulnerabilities
 
-To report security vulnerabilities:
-- **For production use**: Set up a dedicated security contact email
-- Do NOT create public GitHub issues for security bugs
-- Allow 90 days for fix before public disclosure
+If you discover a security vulnerability:
+
+1. **DO NOT** open a public GitHub issue
+2. Email: koch.chris@gmail.com
+3. Include:
+   - Vulnerability description
+   - Steps to reproduce
+   - Potential impact
+   - Suggested fix (if any)
+
+We will respond within 48 hours with a timeline for a fix.
 
 ## Known Security Limitations
 

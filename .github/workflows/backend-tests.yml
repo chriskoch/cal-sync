@@ -1,0 +1,52 @@
+name: Backend Tests
+
+on:
+  push:
+    branches: [ main, dev ]
+  pull_request:
+    branches: [ main, dev ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: calsync_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+
+    - name: Install dependencies
+      working-directory: backend
+      run: pip install -r requirements.txt
+
+    - name: Run tests with coverage
+      working-directory: backend
+      env:
+        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/calsync_test
+        JWT_SECRET: test-secret-key-for-ci
+        ENCRYPTION_KEY: test-encryption-key-32-bytes-base64==
+      run: pytest -v --cov=app --cov-report=term-missing
+
+    - name: Upload coverage reports
+      uses: codecov/codecov-action@v3
+      with:
+        directory: ./backend
