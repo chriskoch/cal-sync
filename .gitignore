@@ -1,4 +1,5 @@
-.env
+# Environment files with secrets
+.env.local
 creds/
 .venv/
 .gcloud/
@@ -24,3 +25,9 @@ dist/
 .vite/
 vite-env.d.ts
 RELEASE_*.md
+frontend/.env
+
+# Dev script logs
+backend.log
+frontend.log
+backend/.env

@@ -4,10 +4,34 @@ This guide provides information for developers working on the Calendar Sync appl
 
 ## Quick Start
 
-```bash
-# Start all services
-docker-compose up -d
+### Local Development (Hot-Reload)
 
+**One command to start everything:**
+```bash
+./dev.sh
+```
+
+This launches:
+- PostgreSQL (Docker container on port 5433)
+- Backend dev server (port 8000) with hot-reload
+- Frontend dev server (port 3033) with hot-reload
+- Combined logs from both services
+
+Press `Ctrl+C` to stop all services.
+
+### Docker Deployment
+
+```bash
+# Build and start
+docker build -t cal-sync:latest .
+docker compose up -d
+
+# Access at http://localhost:8033
+```
+
+### Testing
+
+```bash
 # Run backend tests
 docker-compose exec backend pytest -v
 
@@ -166,16 +190,47 @@ docker-compose exec backend alembic downgrade -1
 4. Commit with descriptive messages
 5. Push and create pull request
 
+## Port Configuration
+
+**Docker Deployment (default - port 8033):**
+- Unified frontend + backend container
+- Access at: `http://localhost:8033`
+- API docs at: `http://localhost:8033/docs`
+- Configured in `.env`: `EXTERNAL_PORT=8033`, `API_URL=http://localhost:8033`, `FRONTEND_URL=http://localhost:8033`
+
+**Local Development (separate ports):**
+- Backend: `http://localhost:8000` (uvicorn dev server)
+- Frontend: `http://localhost:3033` (Vite dev server)
+- Database: `http://localhost:5433` (PostgreSQL)
+- Hot-reload enabled for both backend and frontend
+- Configured in `.env.local` (see `.env.example` for template)
+
+**To change Docker port:**
+1. Edit `.env` file
+2. Update `EXTERNAL_PORT=8088` (or your desired port)
+3. Update `API_URL=http://localhost:8088`
+4. Update `FRONTEND_URL=http://localhost:8088`
+5. Update Google OAuth redirect URI: `http://localhost:8088/api/oauth/callback`
+6. Restart: `docker compose down && docker compose up -d`
+
 ## Environment Variables
 
-See `.env.example` for required variables:
+The project uses a two-file approach:
+- **`.env`** (committed) - Safe defaults for Docker deployment (port 8033)
+- **`.env.local`** (git-ignored) - Your secrets and local overrides
+
+Required variables (add to `.env.local`):
 - `OAUTH_CLIENT_ID` - Google OAuth client ID
 - `OAUTH_CLIENT_SECRET` - Google OAuth client secret
 - `JWT_SECRET` - Secret for JWT token signing
 - `ENCRYPTION_KEY` - Fernet key for OAuth token encryption
-- `DATABASE_URL` - PostgreSQL connection string
 
-**Never commit `.env` files!**
+Optional overrides for local development:
+- `DATABASE_URL` - PostgreSQL connection string (default: Docker container)
+- `API_URL` - Backend URL (default: `http://localhost:8033` for Docker, override to `http://localhost:8000` for local dev)
+- `FRONTEND_URL` - Frontend URL (default: `http://localhost:8033` for Docker, override to `http://localhost:3033` for local dev)
+
+**Never commit `.env.local` files!** They contain your secrets.
 
 ## Performance
 

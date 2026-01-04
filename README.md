@@ -9,6 +9,8 @@ Bi-directional and one-way synchronization of Google Calendar events between two
 **✅ Fully tested and stable** - 128 passing tests (101 backend + 27 frontend) with comprehensive E2E coverage (6 test scripts).
 
 > **📋 See [CHANGELOG.md](CHANGELOG.md) for detailed version history and release notes**
+>
+> **🚀 New to Calendar Sync? Start with [INSTALL.md](INSTALL.md) for a beginner-friendly setup guide!**
 
 ## How it works
 
@@ -51,28 +53,31 @@ Bi-directional and one-way synchronization of Google Calendar events between two
   - Terraform
   - GCP project with billing enabled
 
-## Quick Start
+## Quick Start (Docker Deployment)
 
 ```bash
 # Clone repository
 git clone <repository-url>
 cd cal-sync
 
-# Copy environment template
-cp .env.example .env
-# Edit .env with your OAuth credentials and secrets
+# Copy environment template and add your secrets
+cp .env.example .env.local
+# Edit .env.local with your OAuth credentials (see step-by-step guide below)
 
-# Start all services
-docker-compose up -d
-
-# Run database migrations
-docker-compose exec backend alembic upgrade head
+# Build and start all services (unified container on port 8033)
+docker build -t cal-sync:latest .
+docker compose up -d
 
 # Access application
-# Frontend: http://localhost:3033
-# Backend API: http://localhost:8000
-# API Docs: http://localhost:8000/docs
+# Web App: http://localhost:8033
+# API Docs: http://localhost:8033/docs
 ```
+
+**Port Configuration:**
+- **Docker deployment (default):** Port 8033 - unified frontend + backend
+- **Local development:** Port 8000 (backend), Port 3033 (frontend) - see Local Development Setup below
+
+**To change the Docker port:** Edit `.env` file and update `EXTERNAL_PORT`, `API_URL`, `FRONTEND_URL` (all grouped together with instructions).
 
 ## Local Development Setup
 
@@ -86,12 +91,24 @@ docker-compose exec backend alembic upgrade head
    - Add test users (your Google accounts)
 3. Create OAuth client ID:
    - Application type: **Web application**
-   - Authorized redirect URIs: `http://localhost:8000/oauth/callback`
+   - **Authorized redirect URIs:**
+     - **Docker deployment:** `http://localhost:8033/api/oauth/callback`
+     - **Local development:** `http://localhost:8000/api/oauth/callback`
+     - **Production:** `https://yourdomain.com/api/oauth/callback`
    - Download JSON credentials
+
+   **Note:** If you change the Docker port (via `EXTERNAL_PORT` in `.env`), update the redirect URI to match.
 
 ### 2. Configure Environment Variables
 
-Copy `.env.example` to `.env` and fill in:
+**For Docker deployment:** Copy `.env.example` to `.env.local`:
+
+```bash
+cp .env.example .env.local
+# Edit .env.local with your secrets
+```
+
+The `.env` file (committed) has defaults for Docker (port 8033). Add your secrets to `.env.local`:
 
 ```bash
 # From OAuth client JSON
@@ -101,38 +118,61 @@ OAUTH_CLIENT_SECRET=your-client-secret
 # Generate secrets
 JWT_SECRET=$(openssl rand -base64 32)
 ENCRYPTION_KEY=$(openssl rand -base64 32)
+```
 
-# Database (Docker Postgres)
+**For local development:** Create `.env.local` with local overrides:
+
+```bash
+# Secrets (same as above)
+OAUTH_CLIENT_ID=your-client-id.apps.googleusercontent.com
+OAUTH_CLIENT_SECRET=your-client-secret
+JWT_SECRET=$(openssl rand -base64 32)
+ENCRYPTION_KEY=$(openssl rand -base64 32)
+
+# Local dev overrides (separate backend/frontend)
 DATABASE_URL=postgresql://postgres:dev@localhost:5433/calsync
-
-# API URLs
 API_URL=http://localhost:8000
 FRONTEND_URL=http://localhost:3033
 ```
 
-Frontend dev server uses `frontend/.env`:
+Frontend dev server also needs `frontend/.env`:
 
 ```bash
-VITE_API_URL=http://localhost:8000
+# For local development (backend on port 8000)
+VITE_API_URL=http://localhost:8000/api
 ```
 
-### 3. Start PostgreSQL Database
+### 3. Start Development Environment
+
+**Option A: One-command launch (recommended):**
 
 ```bash
-docker run -d --name cal-sync-db \
-  -e POSTGRES_PASSWORD=dev \
-  -e POSTGRES_DB=calsync \
-  -p 5433:5432 \
-  postgres:15
+./dev.sh
 ```
 
-Or use docker-compose:
+This script automatically:
+- ✅ Checks prerequisites (Docker, Python, Node.js)
+- ✅ Starts PostgreSQL in Docker
+- ✅ Creates Python venv and installs dependencies
+- ✅ Runs database migrations
+- ✅ Installs frontend dependencies
+- ✅ Starts backend (port 8000) with hot-reload
+- ✅ Starts frontend (port 3033) with hot-reload
+- ✅ Shows combined logs
+- ✅ Handles Ctrl+C to stop all services
+
+**Option B: Manual setup:**
+
+<details>
+<summary>Click to expand manual setup instructions</summary>
+
+#### Start PostgreSQL
 
 ```bash
 docker-compose up -d db
 ```
 
-### 4. Setup Backend
+#### Setup Backend
 
 ```bash
 cd backend
@@ -144,22 +184,28 @@ pip install -r requirements.txt
 alembic upgrade head
 
 # Start backend server
-uvicorn app.main:app --reload
+uvicorn app.main:app --reload --port 8000
 ```
 
 Backend runs at http://localhost:8000
 
-### 5. Setup Frontend
+#### Setup Frontend
 
 ```bash
 cd frontend
 npm install
+
+# Create .env for local dev
+echo "VITE_API_URL=http://localhost:8000/api" > .env
+
 npm run dev
 ```
 
 Frontend runs at http://localhost:3033
 
-### 6. Access the Application
+</details>
+
+### 4. Access the Application
 
 1. Open http://localhost:3033
 2. Sign in with Google (registration happens automatically)
@@ -201,29 +247,29 @@ Frontend runs at http://localhost:3033
 
 ### API Endpoints
 
-Backend API documentation: http://localhost:8000/docs
+Backend API documentation: http://localhost:8033/docs (FastAPI auto-generated)
 
 **Authentication:**
-- `GET /auth/me` - Get current user
+- `GET /api/auth/me` - Get current user
 
 **OAuth:**
-- `GET /oauth/start/{account_type}` - Initiate OAuth flow (account_type: "register", "source", or "destination")
-- `GET /oauth/callback` - OAuth callback handler (creates user + source token for registration)
-- `GET /oauth/status` - Check connection status
+- `GET /api/oauth/start/{account_type}` - Initiate OAuth flow (account_type: "register", "source", or "destination")
+- `GET /api/oauth/callback` - OAuth callback handler (creates user + source token for registration)
+- `GET /api/oauth/status` - Check connection status
 
 **Calendars:**
-- `GET /calendars/{account_type}/list` - List available calendars
-- `POST /calendars/{account_type}/events/create` - Create event (for E2E testing)
-- `POST /calendars/{account_type}/events/update` - Update event (for E2E testing)
-- `POST /calendars/{account_type}/events/delete` - Delete event (for E2E testing)
-- `POST /calendars/{account_type}/events/list` - List events with filters (for E2E testing)
+- `GET /api/calendars/{account_type}/list` - List available calendars
+- `POST /api/calendars/{account_type}/events/create` - Create event (for E2E testing)
+- `POST /api/calendars/{account_type}/events/update` - Update event (for E2E testing)
+- `POST /api/calendars/{account_type}/events/delete` - Delete event (for E2E testing)
+- `POST /api/calendars/{account_type}/events/list` - List events with filters (for E2E testing)
 
 **Sync:**
-- `POST /sync/config` - Create sync configuration (supports bi-directional)
-- `GET /sync/config` - List user's sync configs
-- `DELETE /sync/config/{config_id}` - Delete sync configuration
-- `POST /sync/trigger/{config_id}` - Trigger manual sync (supports trigger_both_directions parameter)
-- `GET /sync/logs/{config_id}` - View sync history
+- `POST /api/sync/config` - Create sync configuration (supports bi-directional)
+- `GET /api/sync/config` - List user's sync configs
+- `DELETE /api/sync/config/{config_id}` - Delete sync configuration
+- `POST /api/sync/trigger/{config_id}` - Trigger manual sync (supports trigger_both_directions parameter)
+- `GET /api/sync/logs/{config_id}` - View sync history
 
 ## Project Structure
 
