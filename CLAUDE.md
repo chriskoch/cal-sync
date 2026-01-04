@@ -39,11 +39,11 @@ docker compose down
 ├── backend/
 │   ├── app/
 │   │   ├── api/           # API endpoints (auth, oauth, calendars, sync)
-│   │   ├── core/          # Business logic (sync_engine)
+│   │   ├── core/          # Business logic (sync_engine, scheduler)
 │   │   ├── models/        # SQLAlchemy models
 │   │   ├── migrations/    # Alembic database migrations
 │   │   └── database.py    # Database configuration
-│   ├── tests/             # Backend tests
+│   ├── tests/             # Backend tests (including scheduler tests)
 │   └── Dockerfile         # Backend container
 ├── frontend/
 │   ├── src/
@@ -151,6 +151,84 @@ Only these fields trigger updates. Metadata (etag, updated, id) is ignored.
 Default sync window: **now → 90 days** (configurable per sync config).
 Past events are never synced or modified.
 
+### Auto-Sync Scheduler
+
+Located in [backend/app/core/scheduler.py](backend/app/core/scheduler.py).
+
+**Architecture:**
+- **APScheduler 3.10.4** with AsyncIOScheduler for FastAPI compatibility
+- **In-memory job store** (stateless, reloads from DB on startup)
+- **Thread pool executor** for parallel job execution (max 5 concurrent syncs)
+- **Cron-based scheduling** with timezone support via pytz
+- **Validation** using croniter for cron expressions and pytz for timezones
+
+**Key Components:**
+
+1. **SyncScheduler Class:**
+   - `start()`: Initializes and starts APScheduler
+   - `shutdown(wait=True)`: Gracefully stops scheduler
+   - `add_job(config_id, user_id, cron_expr, timezone_str)`: Schedules/updates job
+   - `remove_job(config_id)`: Removes scheduled job
+   - `load_all_jobs_from_db(db)`: Loads active configs on startup
+
+2. **Job Management:**
+   - Job ID pattern: `f"sync_{config_id}"`
+   - Jobs automatically replace existing when updated
+   - `coalesce=True`: Missed runs combined into one
+   - `max_instances=1`: Prevents concurrent runs of same job
+   - `misfire_grace_time=300`: 5-minute grace period for delayed jobs
+
+3. **Lifecycle Integration:**
+   - FastAPI lifespan context manager in [main.py](backend/app/main.py:15)
+   - Scheduler starts on app startup
+   - Loads all active auto-sync jobs from database
+   - Graceful shutdown on app termination
+
+4. **Scheduled Sync Job Function:**
+   - `scheduled_sync_job(config_id, user_id)`: Executed by APScheduler
+   - Fetches sync config from database
+   - Validates config is active and has auto_sync_enabled=True
+   - Retrieves OAuth credentials for both accounts
+   - Creates SyncLog entry with status="running"
+   - Executes `run_sync_task()` (reuses existing sync logic)
+   - Handles errors: missing config, inactive config, missing credentials
+   - Logs failures to sync_logs table
+
+5. **Validation Functions:**
+   - `validate_cron_expression(cron_expr)`: Validates using croniter
+   - `validate_timezone(timezone_str)`: Validates IANA timezone strings
+
+**API Integration:**
+- `POST /sync/config`: Creates config + schedules job if auto_sync_enabled=True
+- `PATCH /sync/config/{id}`: Updates config + reschedules job if cron/timezone changed
+- `DELETE /sync/config/{id}`: Deletes config + removes scheduled job
+- Pydantic validators ensure valid cron expressions and timezones before database commit
+
+**Database Fields:**
+- `auto_sync_enabled`: Boolean flag (default: False, indexed for efficient filtering)
+- `auto_sync_cron`: Cron expression string (e.g., "0 */6 * * *", nullable)
+- `auto_sync_timezone`: IANA timezone string (default: "UTC")
+
+**Frontend Integration:**
+- Auto-sync toggle in SyncConfigForm
+- Cron expression input with validation
+- Timezone selector (UTC, America/New_York, Europe/London, Asia/Tokyo, Australia/Sydney)
+- Helper link to https://crontab.cronhub.io/ for cron expression builder
+- Auto-sync status displayed on Dashboard with Schedule icon
+
+**Error Handling:**
+- Invalid cron expressions: 422 validation error before database commit
+- Invalid timezones: 422 validation error before database commit
+- Missing credentials: Creates failed SyncLog with detailed error message
+- Inactive configs: Job skips execution, logs warning
+- Missing configs: Job silently skips (config was deleted)
+
+**Testing:**
+- 26 unit tests in [test_scheduler.py](backend/tests/test_scheduler.py)
+- 17 integration tests in [test_sync_api_scheduling.py](backend/tests/test_sync_api_scheduling.py)
+- 100% code coverage on scheduler module
+- Tests cover: validation, lifecycle, job management, error scenarios, API integration
+
 ## API Endpoints
 
 ### Authentication
@@ -189,6 +267,11 @@ Past events are never synced or modified.
 - destination_color_id: str | None  # Event color ID (1-11)
 - is_active: bool
 - last_synced_at: datetime | None
+
+# Auto-sync scheduling fields
+- auto_sync_enabled: bool (default: False)
+- auto_sync_cron: str | None  # Cron expression (e.g., "0 */6 * * *")
+- auto_sync_timezone: str (default: "UTC")  # IANA timezone
 ```
 
 ### SyncLog

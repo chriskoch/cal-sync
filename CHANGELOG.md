@@ -5,6 +5,79 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.0] - 2026-01-04
+
+### Added
+- **Automatic Scheduled Syncs (Major Feature)**
+  - APScheduler 3.10.4 integration with AsyncIOScheduler for FastAPI compatibility
+  - Cron-based scheduling with timezone support (pytz)
+  - In-memory job store with automatic database reload on startup
+  - Thread pool executor for parallel job execution (max 5 concurrent syncs)
+  - Per-config scheduling with auto_sync_enabled flag, cron expression, and timezone
+  - FastAPI lifespan context manager for graceful scheduler startup/shutdown
+  - Comprehensive validation for cron expressions (croniter) and IANA timezones (pytz)
+  - Job management: automatic replacement on update, missed run coalescing, concurrent run prevention
+  - Integration with existing sync infrastructure (reuses run_sync_task)
+  - Error handling and logging for missing configs, inactive configs, and missing credentials
+
+- **Database Schema Updates**
+  - New `auto_sync_enabled` boolean field (default: False, indexed)
+  - New `auto_sync_cron` string field for cron expressions (e.g., "0 */6 * * *")
+  - New `auto_sync_timezone` string field for IANA timezone (default: "UTC")
+  - Database migration: `93a33b780cdd_add_auto_sync_scheduling_fields.py`
+
+- **API Enhancements**
+  - Auto-sync fields in POST/PATCH /sync/config endpoints
+  - Pydantic model_validator for cross-field validation (auto_sync_enabled requires auto_sync_cron)
+  - Scheduler integration in create/update/delete config endpoints
+  - Automatic job scheduling/rescheduling/removal based on config changes
+
+- **Frontend Features**
+  - Auto-sync toggle in SyncConfigForm
+  - Cron expression input with examples and validation
+  - Timezone selector (UTC, America/New_York, Europe/London, Asia/Tokyo, Australia/Sydney)
+  - Helper link to https://crontab.cronhub.io/ for cron expression builder
+  - Auto-sync status displayed on Dashboard with Schedule icon
+  - Support for auto-sync in both one-way and bi-directional sync configs
+
+- **Testing**
+  - 26 new unit tests in `backend/tests/test_scheduler.py`
+    - Cron validation tests (2)
+    - Timezone validation tests (2)
+    - Scheduler lifecycle tests (7)
+    - Job management tests (6)
+    - Scheduled sync job tests (5)
+    - Singleton pattern tests (2)
+    - Database loading tests (2)
+  - 17 new integration tests in `backend/tests/test_sync_api_scheduling.py`
+    - Create config with auto-sync (7 tests)
+    - Update config with auto-sync (6 tests)
+    - Delete config with auto-sync (2 tests)
+    - Response format validation (2 tests)
+  - 100% code coverage on scheduler module
+  - Total: 154 passing tests (127 backend + 27 frontend), up from 128 tests
+
+### Changed
+- **Documentation**
+  - Updated README.md with auto-sync scheduler feature
+  - Updated CLAUDE.md with comprehensive scheduler documentation
+  - Updated test counts throughout documentation (154 tests total)
+  - Removed "manual execution only" limitation
+  - Moved "Automatic scheduled syncs" from Future Enhancements to Completed features
+
+- **Dependencies**
+  - Added APScheduler==3.10.4
+  - Added croniter==2.0.1
+  - Added pytz==2024.1
+
+### Improved
+- **Architecture**
+  - Stateless scheduler design with database reload on startup
+  - Timezone-aware cron scheduling per sync config
+  - Prevents job overlaps with max_instances=1 configuration
+  - Graceful startup and shutdown integration with FastAPI
+  - Minimal code duplication by reusing existing sync_engine functions
+
 ## [0.7.1] - 2026-01-04
 
 ### Added

@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from sqlalchemy.orm import Session
-from pydantic import BaseModel, field_serializer
+from pydantic import BaseModel, field_serializer, field_validator, model_validator
 from typing import List, Optional
 from datetime import datetime
 from uuid import UUID
@@ -13,6 +13,7 @@ from app.models.sync_log import SyncLog
 from app.api.auth import get_current_user
 from app.api.oauth import get_credentials_from_db
 from app.core.sync_engine import SyncEngine
+from app.core.scheduler import get_scheduler, validate_cron_expression, validate_timezone
 from app.config import settings
 
 router = APIRouter(prefix="/sync", tags=["sync"])
@@ -35,6 +36,31 @@ class CreateSyncConfigRequest(BaseModel):
     reverse_privacy_mode_enabled: Optional[bool] = None
     reverse_privacy_placeholder_text: Optional[str] = None
 
+    # Auto-sync scheduling
+    auto_sync_enabled: bool = False
+    auto_sync_cron: Optional[str] = None
+    auto_sync_timezone: str = "UTC"
+
+    @field_validator('auto_sync_cron')
+    @classmethod
+    def validate_cron(cls, v):
+        if v and not validate_cron_expression(v):
+            raise ValueError(f'Invalid cron expression: {v}')
+        return v
+
+    @field_validator('auto_sync_timezone')
+    @classmethod
+    def validate_tz(cls, v):
+        if not validate_timezone(v):
+            raise ValueError(f'Invalid timezone: {v}')
+        return v
+
+    @model_validator(mode='after')
+    def validate_auto_sync_fields(self):
+        if self.auto_sync_enabled and not self.auto_sync_cron:
+            raise ValueError('auto_sync_cron required when auto_sync_enabled=True')
+        return self
+
 
 class SyncConfigResponse(BaseModel):
     id: UUID
@@ -51,6 +77,11 @@ class SyncConfigResponse(BaseModel):
     privacy_mode_enabled: bool
     privacy_placeholder_text: Optional[str] = None
 
+    # Auto-sync fields
+    auto_sync_enabled: bool
+    auto_sync_cron: Optional[str] = None
+    auto_sync_timezone: str
+
     @field_serializer('id', 'paired_config_id')
     def serialize_uuid(self, value: Optional[UUID]) -> Optional[str]:
         return str(value) if value else None
@@ -65,6 +96,25 @@ class UpdateSyncConfigRequest(BaseModel):
     privacy_placeholder_text: Optional[str] = None
     is_active: Optional[bool] = None
     destination_color_id: Optional[str] = None
+
+    # Auto-sync fields
+    auto_sync_enabled: Optional[bool] = None
+    auto_sync_cron: Optional[str] = None
+    auto_sync_timezone: Optional[str] = None
+
+    @field_validator('auto_sync_cron')
+    @classmethod
+    def validate_cron(cls, v):
+        if v and not validate_cron_expression(v):
+            raise ValueError(f'Invalid cron expression: {v}')
+        return v
+
+    @field_validator('auto_sync_timezone')
+    @classmethod
+    def validate_tz(cls, v):
+        if v and not validate_timezone(v):
+            raise ValueError(f'Invalid timezone: {v}')
+        return v
 
 
 class SyncTriggerResponse(BaseModel):
@@ -100,6 +150,8 @@ def create_sync_config(
     db: Session = Depends(get_db),
 ):
     """Create a new sync configuration with optional bi-directional support."""
+    scheduler = get_scheduler()
+
     if config_data.enable_bidirectional:
         # Create A→B config
         config_a_to_b_params = {
@@ -109,6 +161,9 @@ def create_sync_config(
             "sync_lookahead_days": config_data.sync_lookahead_days,
             "sync_direction": "bidirectional_a_to_b",
             "privacy_mode_enabled": config_data.privacy_mode_enabled,
+            "auto_sync_enabled": config_data.auto_sync_enabled,
+            "auto_sync_cron": config_data.auto_sync_cron,
+            "auto_sync_timezone": config_data.auto_sync_timezone,
         }
         # Only set optional fields if they're not None (to allow database defaults)
         if config_data.destination_color_id is not None:
@@ -129,6 +184,9 @@ def create_sync_config(
             "sync_direction": "bidirectional_b_to_a",
             "paired_config_id": config_a_to_b.id,  # Link to A→B
             "privacy_mode_enabled": config_data.reverse_privacy_mode_enabled if config_data.reverse_privacy_mode_enabled is not None else config_data.privacy_mode_enabled,
+            "auto_sync_enabled": config_data.auto_sync_enabled,
+            "auto_sync_cron": config_data.auto_sync_cron,
+            "auto_sync_timezone": config_data.auto_sync_timezone,
         }
         # Only set optional fields if they're not None
         if config_data.destination_color_id is not None:
@@ -147,6 +205,22 @@ def create_sync_config(
 
         db.commit()
         db.refresh(config_a_to_b)
+
+        # Schedule both configs if auto-sync enabled
+        if config_data.auto_sync_enabled and config_data.auto_sync_cron:
+            scheduler.add_job(
+                str(config_a_to_b.id),
+                str(current_user.id),
+                config_data.auto_sync_cron,
+                config_data.auto_sync_timezone
+            )
+            scheduler.add_job(
+                str(config_b_to_a.id),
+                str(current_user.id),
+                config_data.auto_sync_cron,
+                config_data.auto_sync_timezone
+            )
+
         return config_a_to_b
     else:
         # One-way config (backward compatible)
@@ -157,6 +231,9 @@ def create_sync_config(
             "sync_lookahead_days": config_data.sync_lookahead_days,
             "sync_direction": "one_way",
             "privacy_mode_enabled": config_data.privacy_mode_enabled,
+            "auto_sync_enabled": config_data.auto_sync_enabled,
+            "auto_sync_cron": config_data.auto_sync_cron,
+            "auto_sync_timezone": config_data.auto_sync_timezone,
         }
         # Only set optional fields if they're not None (to allow database defaults)
         if config_data.destination_color_id is not None:
@@ -168,6 +245,16 @@ def create_sync_config(
         db.add(new_config)
         db.commit()
         db.refresh(new_config)
+
+        # Schedule if auto-sync enabled
+        if config_data.auto_sync_enabled and config_data.auto_sync_cron:
+            scheduler.add_job(
+                str(new_config.id),
+                str(current_user.id),
+                config_data.auto_sync_cron,
+                config_data.auto_sync_timezone
+            )
+
         return new_config
 
 
@@ -189,6 +276,8 @@ def update_sync_config(
     db: Session = Depends(get_db),
 ):
     """Update sync configuration settings."""
+    scheduler = get_scheduler()
+
     sync_config = db.query(SyncConfig).filter(
         SyncConfig.id == config_id,
         SyncConfig.user_id == current_user.id,
@@ -200,6 +289,9 @@ def update_sync_config(
             detail="Sync configuration not found",
         )
 
+    # Track if scheduling needs update
+    schedule_changed = False
+
     # Update fields if provided
     if update_data.privacy_mode_enabled is not None:
         sync_config.privacy_mode_enabled = update_data.privacy_mode_enabled
@@ -207,11 +299,38 @@ def update_sync_config(
         sync_config.privacy_placeholder_text = update_data.privacy_placeholder_text
     if update_data.is_active is not None:
         sync_config.is_active = update_data.is_active
+        schedule_changed = True  # Inactive configs should not be scheduled
     if update_data.destination_color_id is not None:
         sync_config.destination_color_id = update_data.destination_color_id
 
+    # Update auto-sync settings
+    if update_data.auto_sync_enabled is not None:
+        sync_config.auto_sync_enabled = update_data.auto_sync_enabled
+        schedule_changed = True
+    if update_data.auto_sync_cron is not None:
+        sync_config.auto_sync_cron = update_data.auto_sync_cron
+        schedule_changed = True
+    if update_data.auto_sync_timezone is not None:
+        sync_config.auto_sync_timezone = update_data.auto_sync_timezone
+        schedule_changed = True
+
     db.commit()
     db.refresh(sync_config)
+
+    # Update scheduler if needed
+    if schedule_changed:
+        if sync_config.is_active and sync_config.auto_sync_enabled and sync_config.auto_sync_cron:
+            # Add/update scheduled job
+            scheduler.add_job(
+                str(sync_config.id),
+                str(current_user.id),
+                sync_config.auto_sync_cron,
+                sync_config.auto_sync_timezone
+            )
+        else:
+            # Remove scheduled job
+            scheduler.remove_job(str(sync_config.id))
+
     return sync_config
 
 
@@ -330,6 +449,8 @@ def delete_sync_config(
     db: Session = Depends(get_db),
 ):
     """Delete a sync configuration."""
+    scheduler = get_scheduler()
+
     # Get sync config
     sync_config = db.query(SyncConfig).filter(
         SyncConfig.id == config_id,
@@ -341,6 +462,9 @@ def delete_sync_config(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Sync configuration not found",
         )
+
+    # Remove from scheduler before deleting
+    scheduler.remove_job(config_id)
 
     # Delete sync logs first (foreign key constraint)
     db.query(SyncLog).filter(SyncLog.sync_config_id == config_id).delete()
