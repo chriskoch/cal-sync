@@ -31,6 +31,11 @@ class SyncConfig(Base):
     privacy_mode_enabled = Column(Boolean, default=False, nullable=False)
     privacy_placeholder_text = Column(String(255), default="Personal appointment", nullable=True)
 
+    # Auto-sync scheduling
+    auto_sync_enabled = Column(Boolean, default=False, nullable=False)
+    auto_sync_cron = Column(String(100), nullable=True)  # Cron expression (e.g., "0 */6 * * *")
+    auto_sync_timezone = Column(String(50), default="UTC", nullable=False)
+
     # Last sync timestamp
     last_synced_at = Column(DateTime(timezone=True))
 

@@ -72,6 +72,11 @@ export interface SyncConfig {
   paired_config_id?: string;
   privacy_mode_enabled: boolean;
   privacy_placeholder_text?: string;
+
+  // Auto-sync fields
+  auto_sync_enabled: boolean;
+  auto_sync_cron?: string;
+  auto_sync_timezone: string;
 }
 
 export interface SyncLog {
@@ -98,6 +103,11 @@ export interface CreateSyncConfigRequest {
   privacy_placeholder_text?: string;
   reverse_privacy_mode_enabled?: boolean;
   reverse_privacy_placeholder_text?: string;
+
+  // Auto-sync fields
+  auto_sync_enabled?: boolean;
+  auto_sync_cron?: string;
+  auto_sync_timezone?: string;
 }
 
 export interface UpdateSyncConfigRequest {
@@ -105,6 +115,11 @@ export interface UpdateSyncConfigRequest {
   privacy_placeholder_text?: string;
   is_active?: boolean;
   destination_color_id?: string;
+
+  // Auto-sync fields
+  auto_sync_enabled?: boolean;
+  auto_sync_cron?: string;
+  auto_sync_timezone?: string;
 }
 
 // API methods

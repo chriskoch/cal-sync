@@ -20,6 +20,7 @@ import {
   DialogActions,
   IconButton,
   Card,
+  Link,
 } from '@mui/material';
 import { PlayArrow, Circle, Lock, Close, Add } from '@mui/icons-material';
 import CalendarSelector from './CalendarSelector';
@@ -53,6 +54,11 @@ export default function SyncConfigForm({ onConfigCreated }: SyncConfigFormProps)
   const [reversePrivacyModeEnabled, setReversePrivacyModeEnabled] = useState(false);
   const [reversePrivacyPlaceholderText, setReversePrivacyPlaceholderText] = useState('Personal appointment');
 
+  // Auto-sync scheduling
+  const [autoSyncEnabled, setAutoSyncEnabled] = useState(false);
+  const [cronExpression, setCronExpression] = useState('0 */6 * * *'); // Default: every 6 hours
+  const [timezone, setTimezone] = useState('UTC');
+
   const handleOpen = () => {
     setOpen(true);
     // Reset form
@@ -67,6 +73,9 @@ export default function SyncConfigForm({ onConfigCreated }: SyncConfigFormProps)
     setPrivacyPlaceholderText('Personal appointment');
     setReversePrivacyModeEnabled(false);
     setReversePrivacyPlaceholderText('Personal appointment');
+    setAutoSyncEnabled(false);
+    setCronExpression('0 */6 * * *');
+    setTimezone('UTC');
     setError('');
     setSuccess('');
   };
@@ -104,6 +113,9 @@ export default function SyncConfigForm({ onConfigCreated }: SyncConfigFormProps)
         reverse_privacy_mode_enabled: enableBidirectional ? reversePrivacyModeEnabled : undefined,
         reverse_privacy_placeholder_text:
           enableBidirectional && reversePrivacyModeEnabled ? reversePrivacyPlaceholderText : undefined,
+        auto_sync_enabled: autoSyncEnabled,
+        auto_sync_cron: autoSyncEnabled ? cronExpression : undefined,
+        auto_sync_timezone: autoSyncEnabled ? timezone : 'UTC',
       });
 
       setSuccess(
@@ -551,6 +563,166 @@ export default function SyncConfigForm({ onConfigCreated }: SyncConfigFormProps)
                   </Card>
                 </Grid>
               )}
+
+              {/* Auto-sync Scheduling */}
+              <Grid item xs={12}>
+                <Divider sx={{ my: 2 }} />
+                <Typography
+                  variant="subtitle2"
+                  sx={{
+                    fontSize: '15px',
+                    fontWeight: 600,
+                    color: '#202124',
+                    mb: 2,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1,
+                  }}
+                >
+                  <Box
+                    component="span"
+                    sx={{
+                      width: 4,
+                      height: 20,
+                      bgcolor: '#1a73e8',
+                      borderRadius: 1,
+                    }}
+                  />
+                  Automatic Syncing
+                </Typography>
+
+                <Card
+                  elevation={0}
+                  sx={{
+                    border: '1px solid #dadce0',
+                    borderRadius: 2,
+                    bgcolor: '#f8f9fa',
+                  }}
+                >
+                  <Box sx={{ p: 2.5 }}>
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        fontSize: '13px',
+                        color: '#5f6368',
+                        mb: 1.5,
+                      }}
+                    >
+                      Schedule automatic syncs using cron expressions
+                    </Typography>
+
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={autoSyncEnabled}
+                          onChange={(e) => setAutoSyncEnabled(e.target.checked)}
+                          size="small"
+                          sx={{
+                            '& .MuiSwitch-switchBase.Mui-checked': {
+                              color: '#1a73e8',
+                            },
+                            '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                              backgroundColor: '#1a73e8',
+                            },
+                          }}
+                        />
+                      }
+                      label={
+                        <Typography sx={{ fontSize: '14px', color: '#202124' }}>
+                          Enable automatic syncing
+                        </Typography>
+                      }
+                    />
+
+                    {autoSyncEnabled && (
+                      <>
+                        <Box>
+                          <TextField
+                            fullWidth
+                            label="Cron Schedule"
+                            value={cronExpression}
+                            onChange={(e) => setCronExpression(e.target.value)}
+                            size="small"
+                            sx={{
+                              mt: 2,
+                              bgcolor: 'white',
+                              '& .MuiOutlinedInput-root': {
+                                '& fieldset': {
+                                  borderColor: '#dadce0',
+                                },
+                                '&:hover fieldset': {
+                                  borderColor: '#1967d2',
+                                },
+                              },
+                            }}
+                          />
+                          <Typography
+                            variant="caption"
+                            sx={{
+                              display: 'block',
+                              mt: 0.5,
+                              ml: 1.75,
+                              color: '#5f6368',
+                              fontSize: '12px',
+                            }}
+                          >
+                            e.g., '0 */6 * * *' for every 6 hours, '0 0 * * *' for daily at midnight.{' '}
+                            <Link
+                              href="https://crontab.cronhub.io/"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              sx={{
+                                color: '#1a73e8',
+                                textDecoration: 'none',
+                                '&:hover': {
+                                  textDecoration: 'underline',
+                                },
+                              }}
+                            >
+                              Need help? Use cron expression builder
+                            </Link>
+                          </Typography>
+                        </Box>
+
+                        <FormControl
+                          fullWidth
+                          size="small"
+                          sx={{
+                            mt: 2,
+                            bgcolor: 'white',
+                            '& .MuiOutlinedInput-root': {
+                              '& fieldset': {
+                                borderColor: '#dadce0',
+                              },
+                              '&:hover fieldset': {
+                                borderColor: '#1967d2',
+                              },
+                            },
+                          }}
+                        >
+                          <InputLabel>Timezone</InputLabel>
+                          <Select
+                            value={timezone}
+                            onChange={(e) => setTimezone(e.target.value)}
+                            label="Timezone"
+                          >
+                            <MenuItem value="UTC">UTC</MenuItem>
+                            <MenuItem value="America/New_York">America/New_York (EST/EDT)</MenuItem>
+                            <MenuItem value="America/Chicago">America/Chicago (CST/CDT)</MenuItem>
+                            <MenuItem value="America/Denver">America/Denver (MST/MDT)</MenuItem>
+                            <MenuItem value="America/Los_Angeles">America/Los_Angeles (PST/PDT)</MenuItem>
+                            <MenuItem value="Europe/London">Europe/London (GMT/BST)</MenuItem>
+                            <MenuItem value="Europe/Paris">Europe/Paris (CET/CEST)</MenuItem>
+                            <MenuItem value="Asia/Tokyo">Asia/Tokyo (JST)</MenuItem>
+                            <MenuItem value="Asia/Shanghai">Asia/Shanghai (CST)</MenuItem>
+                            <MenuItem value="Australia/Sydney">Australia/Sydney (AEST/AEDT)</MenuItem>
+                          </Select>
+                        </FormControl>
+                      </>
+                    )}
+                  </Box>
+                </Card>
+              </Grid>
             </Grid>
           </form>
         </DialogContent>

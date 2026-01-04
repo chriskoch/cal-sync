@@ -31,6 +31,7 @@ import {
   Lock,
   SwapHoriz,
   ArrowForward,
+  Schedule,
 } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
 import { oauthAPI, OAuthStatus, SyncConfig, syncAPI, calendarsAPI, CalendarItem } from '../services/api';
@@ -765,6 +766,20 @@ export default function Dashboard() {
                                   }}
                                 />
                               )}
+                              {forwardConfig.auto_sync_enabled && (
+                                <Chip
+                                  icon={<Schedule sx={{ fontSize: 14 }} />}
+                                  label={`Auto: ${forwardConfig.auto_sync_cron}`}
+                                  size="small"
+                                  sx={{
+                                    height: 24,
+                                    fontSize: '12px',
+                                    bgcolor: 'transparent',
+                                    border: '1px solid #1a73e8',
+                                    color: '#1a73e8',
+                                  }}
+                                />
+                              )}
                             </Box>
                           </Box>
 
@@ -816,6 +831,20 @@ export default function Dashboard() {
                                       bgcolor: 'transparent',
                                       border: '1px solid #dadce0',
                                       color: '#5f6368',
+                                    }}
+                                  />
+                                )}
+                                {reverseConfig.auto_sync_enabled && (
+                                  <Chip
+                                    icon={<Schedule sx={{ fontSize: 14 }} />}
+                                    label={`Auto: ${reverseConfig.auto_sync_cron}`}
+                                    size="small"
+                                    sx={{
+                                      height: 24,
+                                      fontSize: '12px',
+                                      bgcolor: 'transparent',
+                                      border: '1px solid #1a73e8',
+                                      color: '#1a73e8',
                                     }}
                                   />
                                 )}
@@ -978,6 +1007,20 @@ export default function Dashboard() {
                                 bgcolor: 'transparent',
                                 border: '1px solid #dadce0',
                                 color: '#5f6368',
+                              }}
+                            />
+                          )}
+                          {config.auto_sync_enabled && (
+                            <Chip
+                              icon={<Schedule sx={{ fontSize: 14 }} />}
+                              label={`Auto: ${config.auto_sync_cron}`}
+                              size="small"
+                              sx={{
+                                height: 24,
+                                fontSize: '12px',
+                                bgcolor: 'transparent',
+                                border: '1px solid #1a73e8',
+                                color: '#1a73e8',
                               }}
                             />
                           )}
