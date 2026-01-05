@@ -21,8 +21,10 @@ import {
   IconButton,
   Card,
   Link,
+  ToggleButtonGroup,
+  ToggleButton,
 } from '@mui/material';
-import { PlayArrow, Circle, Lock, Close, Add } from '@mui/icons-material';
+import { PlayArrow, Circle, Lock, Close, Add, ArrowForward, SyncAlt } from '@mui/icons-material';
 import CalendarSelector from './CalendarSelector';
 import { syncAPI, SyncConfig } from '../services/api';
 import { CALENDAR_COLORS } from '../constants/colors';
@@ -39,6 +41,7 @@ export default function SyncConfigForm({ onConfigCreated }: SyncConfigFormProps)
   const [destCalendarName, setDestCalendarName] = useState('');
   const [syncLookaheadDays, setSyncLookaheadDays] = useState(90);
   const [destinationColorId, setDestinationColorId] = useState('');
+  const [reverseDestinationColorId, setReverseDestinationColorId] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -68,6 +71,7 @@ export default function SyncConfigForm({ onConfigCreated }: SyncConfigFormProps)
     setDestCalendarName('');
     setSyncLookaheadDays(90);
     setDestinationColorId('');
+    setReverseDestinationColorId('');
     setEnableBidirectional(false);
     setPrivacyModeEnabled(false);
     setPrivacyPlaceholderText('Personal appointment');
@@ -113,6 +117,7 @@ export default function SyncConfigForm({ onConfigCreated }: SyncConfigFormProps)
         reverse_privacy_mode_enabled: enableBidirectional ? reversePrivacyModeEnabled : undefined,
         reverse_privacy_placeholder_text:
           enableBidirectional && reversePrivacyModeEnabled ? reversePrivacyPlaceholderText : undefined,
+        reverse_destination_color_id: enableBidirectional && reverseDestinationColorId ? reverseDestinationColorId : undefined,
         auto_sync_enabled: autoSyncEnabled,
         auto_sync_cron: autoSyncEnabled ? cronExpression : undefined,
         auto_sync_timezone: autoSyncEnabled ? timezone : 'UTC',
@@ -228,6 +233,71 @@ export default function SyncConfigForm({ onConfigCreated }: SyncConfigFormProps)
 
           <form onSubmit={handleSubmit} id="sync-config-form">
             <Grid container spacing={3}>
+              {/* Sync Type Selection */}
+              <Grid item xs={12}>
+                <ToggleButtonGroup
+                  value={enableBidirectional ? 'bidirectional' : 'oneway'}
+                  exclusive
+                  onChange={(_, newValue) => {
+                    if (newValue !== null) {
+                      setEnableBidirectional(newValue === 'bidirectional');
+                    }
+                  }}
+                  fullWidth
+                  sx={{
+                    '& .MuiToggleButton-root': {
+                      textTransform: 'none',
+                      py: 1.5,
+                      px: 2,
+                      border: '1px solid #dadce0',
+                      color: '#5f6368',
+                      bgcolor: 'white',
+                      '&:hover': {
+                        bgcolor: '#f8f9fa',
+                      },
+                      '&.Mui-selected': {
+                        bgcolor: '#1a73e8',
+                        color: 'white',
+                        border: '1px solid #1a73e8',
+                        '&:hover': {
+                          bgcolor: '#1765cc',
+                        },
+                      },
+                    },
+                  }}
+                >
+                  <ToggleButton value="oneway">
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <ArrowForward sx={{ fontSize: 20 }} />
+                      <Typography sx={{ fontSize: '14px', fontWeight: 500 }}>
+                        One-way sync
+                      </Typography>
+                    </Box>
+                  </ToggleButton>
+                  <ToggleButton value="bidirectional">
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <SyncAlt sx={{ fontSize: 20 }} />
+                      <Typography sx={{ fontSize: '14px', fontWeight: 500 }}>
+                        Bi-directional sync
+                      </Typography>
+                    </Box>
+                  </ToggleButton>
+                </ToggleButtonGroup>
+
+                <Typography
+                  variant="body2"
+                  sx={{
+                    mt: 1,
+                    fontSize: '13px',
+                    color: '#5f6368',
+                  }}
+                >
+                  {enableBidirectional
+                    ? 'Events will sync in both directions between the selected calendars'
+                    : 'Events will sync from Account 1 to Account 2 only'}
+                </Typography>
+              </Grid>
+
               {/* Calendar Selectors */}
               <Grid item xs={12} md={6}>
                 <CalendarSelector
@@ -277,11 +347,19 @@ export default function SyncConfigForm({ onConfigCreated }: SyncConfigFormProps)
               {/* Sync Settings */}
               <Grid item xs={12} md={6}>
                 <FormControl fullWidth>
-                  <InputLabel>Event color</InputLabel>
+                  <InputLabel>
+                    {enableBidirectional
+                      ? `Event color (${sourceCalendarName || 'Account 1'} → ${destCalendarName || 'Account 2'})`
+                      : 'Event color'}
+                  </InputLabel>
                   <Select
                     value={destinationColorId}
                     onChange={(e) => setDestinationColorId(e.target.value)}
-                    label="Event color"
+                    label={
+                      enableBidirectional
+                        ? `Event color (${sourceCalendarName || 'Account 1'} → ${destCalendarName || 'Account 2'})`
+                        : 'Event color'
+                    }
                     sx={{
                       '& .MuiOutlinedInput-notchedOutline': {
                         borderColor: '#dadce0',
@@ -308,7 +386,45 @@ export default function SyncConfigForm({ onConfigCreated }: SyncConfigFormProps)
                 </FormControl>
               </Grid>
 
-              <Grid item xs={12} md={6}>
+              {/* Reverse direction color picker (only for bi-directional) */}
+              {enableBidirectional && (
+                <Grid item xs={12} md={6}>
+                  <FormControl fullWidth>
+                    <InputLabel>
+                      Event color ({destCalendarName || 'Account 2'} → {sourceCalendarName || 'Account 1'})
+                    </InputLabel>
+                    <Select
+                      value={reverseDestinationColorId}
+                      onChange={(e) => setReverseDestinationColorId(e.target.value)}
+                      label={`Event color (${destCalendarName || 'Account 2'} → ${sourceCalendarName || 'Account 1'})`}
+                      sx={{
+                        '& .MuiOutlinedInput-notchedOutline': {
+                          borderColor: '#dadce0',
+                        },
+                        '&:hover .MuiOutlinedInput-notchedOutline': {
+                          borderColor: '#1967d2',
+                        },
+                      }}
+                    >
+                      <MenuItem value="">
+                        <em>Same as source</em>
+                      </MenuItem>
+                      {CALENDAR_COLORS.map((colorOption) => (
+                        <MenuItem key={colorOption.id} value={colorOption.id}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                            <Circle sx={{ color: colorOption.color, fontSize: 16 }} />
+                            <Typography sx={{ fontSize: '14px', color: '#202124' }}>
+                              {colorOption.name}
+                            </Typography>
+                          </Box>
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
+              )}
+
+              <Grid item xs={12} md={enableBidirectional ? 12 : 6}>
                 <TextField
                   fullWidth
                   type="number"
@@ -328,38 +444,6 @@ export default function SyncConfigForm({ onConfigCreated }: SyncConfigFormProps)
                     },
                   }}
                 />
-              </Grid>
-
-              {/* Bi-directional Toggle */}
-              <Grid item xs={12}>
-                <Box sx={{ py: 1 }}>
-                  <FormControlLabel
-                    control={
-                      <Switch
-                        checked={enableBidirectional}
-                        onChange={(e) => setEnableBidirectional(e.target.checked)}
-                        sx={{
-                          '& .MuiSwitch-switchBase.Mui-checked': {
-                            color: '#1a73e8',
-                          },
-                          '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
-                            backgroundColor: '#1a73e8',
-                          },
-                        }}
-                      />
-                    }
-                    label={
-                      <Box>
-                        <Typography sx={{ fontSize: '14px', fontWeight: 500, color: '#202124' }}>
-                          Bi-directional sync
-                        </Typography>
-                        <Typography variant="caption" sx={{ color: '#5f6368', fontSize: '13px' }}>
-                          Events will sync in both directions
-                        </Typography>
-                      </Box>
-                    }
-                  />
-                </Box>
               </Grid>
 
               {/* Privacy Settings */}

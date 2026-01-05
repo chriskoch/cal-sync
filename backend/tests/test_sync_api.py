@@ -156,6 +156,192 @@ class TestCreateSyncConfig:
         assert reverse.privacy_mode_enabled is True
         assert reverse.privacy_placeholder_text == "Personal appointment"
 
+    def test_create_one_way_sync_without_color(self, client, auth_headers, db, test_user):
+        """Test creating one-way sync without destination_color_id (uses source color)."""
+        payload = {
+            "source_calendar_id": "source@example.com",
+            "dest_calendar_id": "dest@example.com",
+            "sync_lookahead_days": 90,
+            "enable_bidirectional": False,
+        }
+
+        response = client.post("/api/sync/config", json=payload, headers=auth_headers)
+
+        assert_response_success(response, status.HTTP_201_CREATED)
+        data = response.json()
+
+        # destination_color_id should be None (will use source event color)
+        assert data["destination_color_id"] is None
+        assert data["sync_direction"] == "one_way"
+
+        # Verify in database
+        config = db.query(SyncConfig).filter(
+            SyncConfig.user_id == test_user.id,
+            SyncConfig.source_calendar_id == "source@example.com"
+        ).first()
+        assert config is not None
+        assert config.destination_color_id is None
+
+    def test_create_one_way_sync_with_color(self, client, auth_headers, db, test_user):
+        """Test creating one-way sync with specific destination color."""
+        payload = {
+            "source_calendar_id": "source@example.com",
+            "dest_calendar_id": "dest@example.com",
+            "sync_lookahead_days": 90,
+            "destination_color_id": "7",  # Peacock
+            "enable_bidirectional": False,
+        }
+
+        response = client.post("/api/sync/config", json=payload, headers=auth_headers)
+
+        assert_response_success(response, status.HTTP_201_CREATED)
+        data = response.json()
+
+        assert data["destination_color_id"] == "7"
+        assert data["sync_direction"] == "one_way"
+
+        # Verify in database
+        config = db.query(SyncConfig).filter(
+            SyncConfig.user_id == test_user.id,
+            SyncConfig.source_calendar_id == "source@example.com"
+        ).first()
+        assert config is not None
+        assert config.destination_color_id == "7"
+
+    def test_create_bidirectional_sync_without_colors(self, client, auth_headers, db, test_user):
+        """Test creating bi-directional sync without colors (both use source colors)."""
+        payload = {
+            "source_calendar_id": "calendar_a@example.com",
+            "dest_calendar_id": "calendar_b@example.com",
+            "sync_lookahead_days": 90,
+            "enable_bidirectional": True,
+        }
+
+        response = client.post("/api/sync/config", json=payload, headers=auth_headers)
+
+        assert_response_success(response, status.HTTP_201_CREATED)
+
+        # Verify both configs have no destination_color_id
+        configs = db.query(SyncConfig).filter(
+            SyncConfig.user_id == test_user.id
+        ).all()
+        assert len(configs) == 2
+
+        forward = next((c for c in configs if c.sync_direction == "bidirectional_a_to_b"), None)
+        reverse = next((c for c in configs if c.sync_direction == "bidirectional_b_to_a"), None)
+
+        assert forward.destination_color_id is None
+        assert reverse.destination_color_id is None
+
+    def test_create_bidirectional_sync_with_same_color(self, client, auth_headers, db, test_user):
+        """Test creating bi-directional sync with same color for both directions."""
+        payload = {
+            "source_calendar_id": "calendar_a@example.com",
+            "dest_calendar_id": "calendar_b@example.com",
+            "sync_lookahead_days": 90,
+            "destination_color_id": "2",  # Sage
+            "enable_bidirectional": True,
+        }
+
+        response = client.post("/api/sync/config", json=payload, headers=auth_headers)
+
+        assert_response_success(response, status.HTTP_201_CREATED)
+
+        # Verify both configs have the same color
+        configs = db.query(SyncConfig).filter(
+            SyncConfig.user_id == test_user.id
+        ).all()
+        assert len(configs) == 2
+
+        forward = next((c for c in configs if c.sync_direction == "bidirectional_a_to_b"), None)
+        reverse = next((c for c in configs if c.sync_direction == "bidirectional_b_to_a"), None)
+
+        # Both should use the same color (fallback behavior)
+        assert forward.destination_color_id == "2"
+        assert reverse.destination_color_id == "2"
+
+    def test_create_bidirectional_sync_with_different_colors(self, client, auth_headers, db, test_user):
+        """Test creating bi-directional sync with different colors per direction."""
+        payload = {
+            "source_calendar_id": "work@example.com",
+            "dest_calendar_id": "personal@example.com",
+            "sync_lookahead_days": 90,
+            "destination_color_id": "5",  # Banana (work→personal)
+            "reverse_destination_color_id": "1",  # Lavender (personal→work)
+            "enable_bidirectional": True,
+        }
+
+        response = client.post("/api/sync/config", json=payload, headers=auth_headers)
+
+        assert_response_success(response, status.HTTP_201_CREATED)
+
+        # Verify configs have different colors
+        configs = db.query(SyncConfig).filter(
+            SyncConfig.user_id == test_user.id
+        ).all()
+        assert len(configs) == 2
+
+        forward = next((c for c in configs if c.sync_direction == "bidirectional_a_to_b"), None)
+        reverse = next((c for c in configs if c.sync_direction == "bidirectional_b_to_a"), None)
+
+        # Forward should use destination_color_id
+        assert forward.destination_color_id == "5"
+        # Reverse should use reverse_destination_color_id
+        assert reverse.destination_color_id == "1"
+
+    def test_create_bidirectional_sync_with_only_reverse_color(self, client, auth_headers, db, test_user):
+        """Test bi-directional sync with only reverse color set (forward uses source color)."""
+        payload = {
+            "source_calendar_id": "calendar_a@example.com",
+            "dest_calendar_id": "calendar_b@example.com",
+            "sync_lookahead_days": 90,
+            "reverse_destination_color_id": "11",  # Tomato (reverse only)
+            "enable_bidirectional": True,
+        }
+
+        response = client.post("/api/sync/config", json=payload, headers=auth_headers)
+
+        assert_response_success(response, status.HTTP_201_CREATED)
+
+        # Verify color mapping
+        configs = db.query(SyncConfig).filter(
+            SyncConfig.user_id == test_user.id
+        ).all()
+
+        forward = next((c for c in configs if c.sync_direction == "bidirectional_a_to_b"), None)
+        reverse = next((c for c in configs if c.sync_direction == "bidirectional_b_to_a"), None)
+
+        # Forward should have no color (uses source)
+        assert forward.destination_color_id is None
+        # Reverse should use reverse_destination_color_id
+        assert reverse.destination_color_id == "11"
+
+    def test_create_bidirectional_color_fallback_behavior(self, client, auth_headers, db, test_user):
+        """Test that reverse direction falls back to forward color when reverse color not provided."""
+        payload = {
+            "source_calendar_id": "calendar_a@example.com",
+            "dest_calendar_id": "calendar_b@example.com",
+            "sync_lookahead_days": 90,
+            "destination_color_id": "3",  # Grape
+            # No reverse_destination_color_id - should fallback to "3"
+            "enable_bidirectional": True,
+        }
+
+        response = client.post("/api/sync/config", json=payload, headers=auth_headers)
+
+        assert_response_success(response, status.HTTP_201_CREATED)
+
+        configs = db.query(SyncConfig).filter(
+            SyncConfig.user_id == test_user.id
+        ).all()
+
+        forward = next((c for c in configs if c.sync_direction == "bidirectional_a_to_b"), None)
+        reverse = next((c for c in configs if c.sync_direction == "bidirectional_b_to_a"), None)
+
+        # Both should have the same color (fallback to forward color)
+        assert forward.destination_color_id == "3"
+        assert reverse.destination_color_id == "3"
+
     def test_create_sync_config_requires_authentication(self, client):
         """Test creating sync config requires authentication."""
         payload = {

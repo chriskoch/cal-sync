@@ -35,6 +35,7 @@ class CreateSyncConfigRequest(BaseModel):
     # Privacy settings for reverse direction (only if enable_bidirectional=True)
     reverse_privacy_mode_enabled: Optional[bool] = None
     reverse_privacy_placeholder_text: Optional[str] = None
+    reverse_destination_color_id: Optional[str] = None  # Color for reverse direction
 
     # Auto-sync scheduling
     auto_sync_enabled: bool = False
@@ -189,8 +190,10 @@ def create_sync_config(
             "auto_sync_timezone": config_data.auto_sync_timezone,
         }
         # Only set optional fields if they're not None
-        if config_data.destination_color_id is not None:
-            config_b_to_a_params["destination_color_id"] = config_data.destination_color_id
+        # For reverse color, use reverse value first, fall back to forward value, or use database default
+        reverse_color = config_data.reverse_destination_color_id or config_data.destination_color_id
+        if reverse_color is not None:
+            config_b_to_a_params["destination_color_id"] = reverse_color
         # For reverse placeholder, use reverse value, fall back to forward value, or use database default
         reverse_placeholder = config_data.reverse_privacy_placeholder_text or config_data.privacy_placeholder_text
         if reverse_placeholder is not None:

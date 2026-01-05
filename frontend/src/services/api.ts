@@ -103,6 +103,7 @@ export interface CreateSyncConfigRequest {
   privacy_placeholder_text?: string;
   reverse_privacy_mode_enabled?: boolean;
   reverse_privacy_placeholder_text?: string;
+  reverse_destination_color_id?: string;
 
   // Auto-sync fields
   auto_sync_enabled?: boolean;

@@ -32,6 +32,7 @@ import {
   SwapHoriz,
   ArrowForward,
   Schedule,
+  DateRange,
 } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
 import { oauthAPI, OAuthStatus, SyncConfig, syncAPI, calendarsAPI, CalendarItem } from '../services/api';
@@ -732,26 +733,13 @@ export default function Dashboard() {
 
                           {/* Forward direction */}
                           <Box sx={{ mb: 2, pb: 2, borderBottom: '1px solid #f1f3f4' }}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                              <Typography
-                                variant="caption"
-                                sx={{
-                                  fontSize: '11px',
-                                  fontWeight: 600,
-                                  color: '#5f6368',
-                                  textTransform: 'uppercase',
-                                  letterSpacing: '0.5px',
-                                }}
-                              >
-                                Direction 1
-                              </Typography>
-                            </Box>
                             <Typography
                               variant="body2"
                               sx={{
                                 fontSize: '14px',
                                 color: '#202124',
                                 mb: 1,
+                                fontWeight: 500,
                               }}
                             >
                               {getCalendarDisplayName(forwardConfig.source_calendar_id)}
@@ -845,46 +833,19 @@ export default function Dashboard() {
                                   }}
                                 />
                               )}
-                              {forwardConfig.auto_sync_enabled && (
-                                <Chip
-                                  icon={<Schedule sx={{ fontSize: 14 }} />}
-                                  label={`Auto: ${forwardConfig.auto_sync_cron} (${forwardConfig.auto_sync_timezone})`}
-                                  size="small"
-                                  sx={{
-                                    height: 24,
-                                    fontSize: '12px',
-                                    bgcolor: 'transparent',
-                                    border: '1px solid #1a73e8',
-                                    color: '#1a73e8',
-                                  }}
-                                />
-                              )}
                             </Box>
                           </Box>
 
                           {/* Reverse direction */}
                           {reverseConfig && (
                             <Box sx={{ mb: 2 }}>
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                                <Typography
-                                  variant="caption"
-                                  sx={{
-                                    fontSize: '11px',
-                                    fontWeight: 600,
-                                    color: '#5f6368',
-                                    textTransform: 'uppercase',
-                                    letterSpacing: '0.5px',
-                                  }}
-                                >
-                                  Direction 2
-                                </Typography>
-                              </Box>
                               <Typography
                                 variant="body2"
                                 sx={{
                                   fontSize: '14px',
                                   color: '#202124',
                                   mb: 1,
+                                  fontWeight: 500,
                                 }}
                               >
                                 {getCalendarDisplayName(reverseConfig.source_calendar_id)}
@@ -978,33 +939,56 @@ export default function Dashboard() {
                                     }}
                                   />
                                 )}
-                                {reverseConfig.auto_sync_enabled && (
-                                  <Chip
-                                    icon={<Schedule sx={{ fontSize: 14 }} />}
-                                    label={`Auto: ${reverseConfig.auto_sync_cron} (${reverseConfig.auto_sync_timezone})`}
-                                    size="small"
-                                    sx={{
-                                      height: 24,
-                                      fontSize: '12px',
-                                      bgcolor: 'transparent',
-                                      border: '1px solid #1a73e8',
-                                      color: '#1a73e8',
-                                    }}
-                                  />
-                                )}
                               </Box>
                             </Box>
                           )}
 
-                          <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mt: 1 }}>
-                            <Typography variant="caption" sx={{ color: '#5f6368', fontSize: '13px' }}>
-                              {forwardConfig.sync_lookahead_days} days
+                          {/* General settings */}
+                          <Box sx={{ mt: 2.5, pt: 2, borderTop: '1px solid #f1f3f4' }}>
+                            <Typography
+                              variant="body2"
+                              sx={{
+                                fontSize: '14px',
+                                color: '#202124',
+                                mb: 1,
+                                fontWeight: 500,
+                              }}
+                            >
+                              Settings
                             </Typography>
-                            {forwardConfig.last_synced_at && (
-                              <Typography variant="caption" sx={{ color: '#5f6368', fontSize: '13px' }}>
-                                Last synced {new Date(forwardConfig.last_synced_at).toLocaleDateString()}
-                              </Typography>
-                            )}
+                            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
+                              <Chip
+                                icon={<DateRange sx={{ fontSize: 14 }} />}
+                                label={`${forwardConfig.sync_lookahead_days} days`}
+                                size="small"
+                                sx={{
+                                  height: 24,
+                                  fontSize: '12px',
+                                  bgcolor: 'transparent',
+                                  border: '1px solid #dadce0',
+                                  color: '#5f6368',
+                                }}
+                              />
+                              {forwardConfig.last_synced_at && (
+                                <Typography variant="caption" sx={{ color: '#5f6368', fontSize: '13px' }}>
+                                  Last synced {new Date(forwardConfig.last_synced_at).toLocaleDateString()}
+                                </Typography>
+                              )}
+                              {forwardConfig.auto_sync_enabled && (
+                                <Chip
+                                  icon={<Schedule sx={{ fontSize: 14 }} />}
+                                  label={`Auto: ${forwardConfig.auto_sync_cron} (${forwardConfig.auto_sync_timezone})`}
+                                  size="small"
+                                  sx={{
+                                    height: 24,
+                                    fontSize: '12px',
+                                    bgcolor: 'transparent',
+                                    border: '1px solid #dadce0',
+                                    color: '#5f6368',
+                                  }}
+                                />
+                              )}
+                            </Box>
                           </Box>
                         </CardContent>
 
@@ -1099,6 +1083,7 @@ export default function Dashboard() {
                             sx={{
                               fontSize: '14px',
                               color: '#202124',
+                              fontWeight: 500,
                             }}
                           >
                             {getCalendarDisplayName(config.source_calendar_id)}
@@ -1205,6 +1190,26 @@ export default function Dashboard() {
                               }}
                             />
                           )}
+                        </Box>
+
+                        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
+                          <Chip
+                            icon={<DateRange sx={{ fontSize: 14 }} />}
+                            label={`${config.sync_lookahead_days} days`}
+                            size="small"
+                            sx={{
+                              height: 24,
+                              fontSize: '12px',
+                              bgcolor: 'transparent',
+                              border: '1px solid #dadce0',
+                              color: '#5f6368',
+                            }}
+                          />
+                          {config.last_synced_at && (
+                            <Typography variant="caption" sx={{ color: '#5f6368', fontSize: '13px' }}>
+                              Last synced {new Date(config.last_synced_at).toLocaleDateString()}
+                            </Typography>
+                          )}
                           {config.auto_sync_enabled && (
                             <Chip
                               icon={<Schedule sx={{ fontSize: 14 }} />}
@@ -1214,21 +1219,10 @@ export default function Dashboard() {
                                 height: 24,
                                 fontSize: '12px',
                                 bgcolor: 'transparent',
-                                border: '1px solid #1a73e8',
-                                color: '#1a73e8',
+                                border: '1px solid #dadce0',
+                                color: '#5f6368',
                               }}
                             />
-                          )}
-                        </Box>
-
-                        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-                          <Typography variant="caption" sx={{ color: '#5f6368', fontSize: '13px' }}>
-                            {config.sync_lookahead_days} days
-                          </Typography>
-                          {config.last_synced_at && (
-                            <Typography variant="caption" sx={{ color: '#5f6368', fontSize: '13px' }}>
-                              Last synced {new Date(config.last_synced_at).toLocaleDateString()}
-                            </Typography>
                           )}
                         </Box>
                       </CardContent>
