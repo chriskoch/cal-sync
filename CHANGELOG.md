@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.3] - 2026-01-05
+
+### Fixed
+- **CRITICAL: Scheduler Not Starting**
+  - Added missing lifespan context manager to FastAPI application
+  - Scheduler now properly initializes on application startup
+  - Auto-sync jobs are loaded from database on startup
+  - Fixes "Scheduler not running, cannot add job" errors
+  - Graceful scheduler shutdown on application termination
+
+### Changed
+- **Application Lifecycle**
+  - Implemented FastAPI lifespan context manager in main.py
+  - Added proper logging for scheduler startup and shutdown events
+  - Imported SessionLocal, get_scheduler, asynccontextmanager, and logging modules
+
+### Impact
+- Auto-sync scheduling feature now fully functional
+- Scheduled sync jobs execute as configured
+- Resolves regression from v0.8.0 where scheduler was never started
+
 ## [0.8.2] - 2026-01-05
 
 ### Fixed
