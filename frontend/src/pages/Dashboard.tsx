@@ -52,6 +52,7 @@ export default function Dashboard() {
   const [selectedConfigId, setSelectedConfigId] = useState<string | null>(null);
   const [userMenuAnchor, setUserMenuAnchor] = useState<null | HTMLElement>(null);
   const [calendarNames, setCalendarNames] = useState<{ [key: string]: string }>({});
+  const [calendarColors, setCalendarColors] = useState<{ [key: string]: string }>({});
 
   // Confirmation dialog state
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
@@ -96,12 +97,16 @@ export default function Dashboard() {
   const fetchCalendarNames = async () => {
     try {
       const nameMap: { [key: string]: string } = {};
+      const colorMap: { [key: string]: string } = {};
 
       // Fetch source calendars
       try {
         const sourceResponse = await calendarsAPI.listCalendars('source');
         sourceResponse.data.calendars.forEach((cal: CalendarItem) => {
           nameMap[cal.id] = cal.summary;
+          if (cal.color_id) {
+            colorMap[cal.id] = cal.color_id;
+          }
         });
       } catch (err) {
         console.error('Failed to fetch source calendars:', err);
@@ -112,12 +117,16 @@ export default function Dashboard() {
         const destResponse = await calendarsAPI.listCalendars('destination');
         destResponse.data.calendars.forEach((cal: CalendarItem) => {
           nameMap[cal.id] = cal.summary;
+          if (cal.color_id) {
+            colorMap[cal.id] = cal.color_id;
+          }
         });
       } catch (err) {
         console.error('Failed to fetch destination calendars:', err);
       }
 
       setCalendarNames(nameMap);
+      setCalendarColors(colorMap);
     } catch (err: unknown) {
       console.error('Failed to fetch calendar names:', err);
     }
@@ -260,7 +269,12 @@ export default function Dashboard() {
   }>(
     (acc, config) => {
       if (config.sync_direction.startsWith('bidirectional_')) {
-        const pairId = config.paired_config_id || config.id;
+        // Use consistent key: the smaller of the two IDs (lexicographically)
+        // This ensures both configs in a pair use the same key
+        const pairId = config.paired_config_id && config.paired_config_id < config.id
+          ? config.paired_config_id
+          : config.id;
+
         if (!acc.bidirectional[pairId]) {
           acc.bidirectional[pairId] = [];
         }
@@ -718,6 +732,20 @@ export default function Dashboard() {
 
                           {/* Forward direction */}
                           <Box sx={{ mb: 2, pb: 2, borderBottom: '1px solid #f1f3f4' }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                              <Typography
+                                variant="caption"
+                                sx={{
+                                  fontSize: '11px',
+                                  fontWeight: 600,
+                                  color: '#5f6368',
+                                  textTransform: 'uppercase',
+                                  letterSpacing: '0.5px',
+                                }}
+                              >
+                                Direction 1
+                              </Typography>
+                            </Box>
                             <Typography
                               variant="body2"
                               sx={{
@@ -731,27 +759,78 @@ export default function Dashboard() {
                               {getCalendarDisplayName(forwardConfig.dest_calendar_id)}
                             </Typography>
                             <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                              {forwardConfig.destination_color_id && CALENDAR_COLORS_MAP[forwardConfig.destination_color_id] && (
-                                <Chip
-                                  icon={
-                                    <Circle
+                              {(() => {
+                                // If destination color is set, show it
+                                if (forwardConfig.destination_color_id && CALENDAR_COLORS_MAP[forwardConfig.destination_color_id]) {
+                                  return (
+                                    <Chip
+                                      icon={
+                                        <Circle
+                                          sx={{
+                                            fontSize: 12,
+                                            color: `${CALENDAR_COLORS_MAP[forwardConfig.destination_color_id].color} !important`
+                                          }}
+                                        />
+                                      }
+                                      label={CALENDAR_COLORS_MAP[forwardConfig.destination_color_id].name}
+                                      size="small"
                                       sx={{
-                                        fontSize: 12,
-                                        color: `${CALENDAR_COLORS_MAP[forwardConfig.destination_color_id].color} !important`
+                                        height: 24,
+                                        fontSize: '12px',
+                                        bgcolor: 'transparent',
+                                        border: '1px solid #dadce0',
+                                        color: '#5f6368',
                                       }}
                                     />
-                                  }
-                                  label={CALENDAR_COLORS_MAP[forwardConfig.destination_color_id].name}
-                                  size="small"
-                                  sx={{
-                                    height: 24,
-                                    fontSize: '12px',
-                                    bgcolor: 'transparent',
-                                    border: '1px solid #dadce0',
-                                    color: '#5f6368',
-                                  }}
-                                />
-                              )}
+                                  );
+                                }
+
+                                // Otherwise, show source calendar color if available
+                                const sourceColorId = calendarColors[forwardConfig.source_calendar_id];
+                                if (sourceColorId) {
+                                  // Calendar colors 12-24 aren't valid event colors, map to Lavender (1)
+                                  const eventColorId = CALENDAR_COLORS_MAP[sourceColorId] ? sourceColorId : '1';
+                                  return (
+                                    <Chip
+                                      icon={
+                                        <Circle
+                                          sx={{
+                                            fontSize: 12,
+                                            color: `${CALENDAR_COLORS_MAP[eventColorId].color} !important`
+                                          }}
+                                        />
+                                      }
+                                      label={`${CALENDAR_COLORS_MAP[eventColorId].name} (source)`}
+                                      size="small"
+                                      sx={{
+                                        height: 24,
+                                        fontSize: '12px',
+                                        bgcolor: 'transparent',
+                                        border: '1px solid #dadce0',
+                                        color: '#5f6368',
+                                        fontStyle: 'italic',
+                                      }}
+                                    />
+                                  );
+                                }
+
+                                // Fallback to generic "Same as source"
+                                return (
+                                  <Chip
+                                    icon={<SwapHoriz sx={{ fontSize: 14 }} />}
+                                    label="Same as source"
+                                    size="small"
+                                    sx={{
+                                      height: 24,
+                                      fontSize: '12px',
+                                      bgcolor: 'transparent',
+                                      border: '1px solid #dadce0',
+                                      color: '#5f6368',
+                                      fontStyle: 'italic',
+                                    }}
+                                  />
+                                );
+                              })()}
                               {forwardConfig.privacy_mode_enabled && (
                                 <Chip
                                   icon={<Lock sx={{ fontSize: 14 }} />}
@@ -769,7 +848,7 @@ export default function Dashboard() {
                               {forwardConfig.auto_sync_enabled && (
                                 <Chip
                                   icon={<Schedule sx={{ fontSize: 14 }} />}
-                                  label={`Auto: ${forwardConfig.auto_sync_cron}`}
+                                  label={`Auto: ${forwardConfig.auto_sync_cron} (${forwardConfig.auto_sync_timezone})`}
                                   size="small"
                                   sx={{
                                     height: 24,
@@ -786,6 +865,20 @@ export default function Dashboard() {
                           {/* Reverse direction */}
                           {reverseConfig && (
                             <Box sx={{ mb: 2 }}>
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                                <Typography
+                                  variant="caption"
+                                  sx={{
+                                    fontSize: '11px',
+                                    fontWeight: 600,
+                                    color: '#5f6368',
+                                    textTransform: 'uppercase',
+                                    letterSpacing: '0.5px',
+                                  }}
+                                >
+                                  Direction 2
+                                </Typography>
+                              </Box>
                               <Typography
                                 variant="body2"
                                 sx={{
@@ -799,27 +892,78 @@ export default function Dashboard() {
                                 {getCalendarDisplayName(reverseConfig.dest_calendar_id)}
                               </Typography>
                               <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                                {reverseConfig.destination_color_id && CALENDAR_COLORS_MAP[reverseConfig.destination_color_id] && (
-                                  <Chip
-                                    icon={
-                                      <Circle
+                                {(() => {
+                                  // If destination color is set, show it
+                                  if (reverseConfig.destination_color_id && CALENDAR_COLORS_MAP[reverseConfig.destination_color_id]) {
+                                    return (
+                                      <Chip
+                                        icon={
+                                          <Circle
+                                            sx={{
+                                              fontSize: 12,
+                                              color: `${CALENDAR_COLORS_MAP[reverseConfig.destination_color_id].color} !important`
+                                            }}
+                                          />
+                                        }
+                                        label={CALENDAR_COLORS_MAP[reverseConfig.destination_color_id].name}
+                                        size="small"
                                         sx={{
-                                          fontSize: 12,
-                                          color: `${CALENDAR_COLORS_MAP[reverseConfig.destination_color_id].color} !important`
+                                          height: 24,
+                                          fontSize: '12px',
+                                          bgcolor: 'transparent',
+                                          border: '1px solid #dadce0',
+                                          color: '#5f6368',
                                         }}
                                       />
-                                    }
-                                    label={CALENDAR_COLORS_MAP[reverseConfig.destination_color_id].name}
-                                    size="small"
-                                    sx={{
-                                      height: 24,
-                                      fontSize: '12px',
-                                      bgcolor: 'transparent',
-                                      border: '1px solid #dadce0',
-                                      color: '#5f6368',
-                                    }}
-                                  />
-                                )}
+                                    );
+                                  }
+
+                                  // Otherwise, show source calendar color if available
+                                  const sourceColorId = calendarColors[reverseConfig.source_calendar_id];
+                                  if (sourceColorId) {
+                                    // Calendar colors 12-24 aren't valid event colors, map to Lavender (1)
+                                    const eventColorId = CALENDAR_COLORS_MAP[sourceColorId] ? sourceColorId : '1';
+                                    return (
+                                      <Chip
+                                        icon={
+                                          <Circle
+                                            sx={{
+                                              fontSize: 12,
+                                              color: `${CALENDAR_COLORS_MAP[eventColorId].color} !important`
+                                            }}
+                                          />
+                                        }
+                                        label={`${CALENDAR_COLORS_MAP[eventColorId].name} (source)`}
+                                        size="small"
+                                        sx={{
+                                          height: 24,
+                                          fontSize: '12px',
+                                          bgcolor: 'transparent',
+                                          border: '1px solid #dadce0',
+                                          color: '#5f6368',
+                                          fontStyle: 'italic',
+                                        }}
+                                      />
+                                    );
+                                  }
+
+                                  // Fallback to generic "Same as source"
+                                  return (
+                                    <Chip
+                                      icon={<SwapHoriz sx={{ fontSize: 14 }} />}
+                                      label="Same as source"
+                                      size="small"
+                                      sx={{
+                                        height: 24,
+                                        fontSize: '12px',
+                                        bgcolor: 'transparent',
+                                        border: '1px solid #dadce0',
+                                        color: '#5f6368',
+                                        fontStyle: 'italic',
+                                      }}
+                                    />
+                                  );
+                                })()}
                                 {reverseConfig.privacy_mode_enabled && (
                                   <Chip
                                     icon={<Lock sx={{ fontSize: 14 }} />}
@@ -837,7 +981,7 @@ export default function Dashboard() {
                                 {reverseConfig.auto_sync_enabled && (
                                   <Chip
                                     icon={<Schedule sx={{ fontSize: 14 }} />}
-                                    label={`Auto: ${reverseConfig.auto_sync_cron}`}
+                                    label={`Auto: ${reverseConfig.auto_sync_cron} (${reverseConfig.auto_sync_timezone})`}
                                     size="small"
                                     sx={{
                                       height: 24,
@@ -975,27 +1119,78 @@ export default function Dashboard() {
                         </Box>
 
                         <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 1.5 }}>
-                          {config.destination_color_id && CALENDAR_COLORS_MAP[config.destination_color_id] && (
-                            <Chip
-                              icon={
-                                <Circle
+                          {(() => {
+                            // If destination color is set, show it
+                            if (config.destination_color_id && CALENDAR_COLORS_MAP[config.destination_color_id]) {
+                              return (
+                                <Chip
+                                  icon={
+                                    <Circle
+                                      sx={{
+                                        fontSize: 12,
+                                        color: `${CALENDAR_COLORS_MAP[config.destination_color_id].color} !important`
+                                      }}
+                                    />
+                                  }
+                                  label={CALENDAR_COLORS_MAP[config.destination_color_id].name}
+                                  size="small"
                                   sx={{
-                                    fontSize: 12,
-                                    color: `${CALENDAR_COLORS_MAP[config.destination_color_id].color} !important`
+                                    height: 24,
+                                    fontSize: '12px',
+                                    bgcolor: 'transparent',
+                                    border: '1px solid #dadce0',
+                                    color: '#5f6368',
                                   }}
                                 />
-                              }
-                              label={CALENDAR_COLORS_MAP[config.destination_color_id].name}
-                              size="small"
-                              sx={{
-                                height: 24,
-                                fontSize: '12px',
-                                bgcolor: 'transparent',
-                                border: '1px solid #dadce0',
-                                color: '#5f6368',
-                              }}
-                            />
-                          )}
+                              );
+                            }
+
+                            // Otherwise, show source calendar color if available
+                            const sourceColorId = calendarColors[config.source_calendar_id];
+                            if (sourceColorId) {
+                              // Calendar colors 12-24 aren't valid event colors, map to Lavender (1)
+                              const eventColorId = CALENDAR_COLORS_MAP[sourceColorId] ? sourceColorId : '1';
+                              return (
+                                <Chip
+                                  icon={
+                                    <Circle
+                                      sx={{
+                                        fontSize: 12,
+                                        color: `${CALENDAR_COLORS_MAP[eventColorId].color} !important`
+                                      }}
+                                    />
+                                  }
+                                  label={`${CALENDAR_COLORS_MAP[eventColorId].name} (source)`}
+                                  size="small"
+                                  sx={{
+                                    height: 24,
+                                    fontSize: '12px',
+                                    bgcolor: 'transparent',
+                                    border: '1px solid #dadce0',
+                                    color: '#5f6368',
+                                    fontStyle: 'italic',
+                                  }}
+                                />
+                              );
+                            }
+
+                            // Fallback to generic "Same as source"
+                            return (
+                              <Chip
+                                icon={<SwapHoriz sx={{ fontSize: 14 }} />}
+                                label="Same as source"
+                                size="small"
+                                sx={{
+                                  height: 24,
+                                  fontSize: '12px',
+                                  bgcolor: 'transparent',
+                                  border: '1px solid #dadce0',
+                                  color: '#5f6368',
+                                  fontStyle: 'italic',
+                                }}
+                              />
+                            );
+                          })()}
                           {config.privacy_mode_enabled && (
                             <Chip
                               icon={<Lock sx={{ fontSize: 14 }} />}
@@ -1013,7 +1208,7 @@ export default function Dashboard() {
                           {config.auto_sync_enabled && (
                             <Chip
                               icon={<Schedule sx={{ fontSize: 14 }} />}
-                              label={`Auto: ${config.auto_sync_cron}`}
+                              label={`Auto: ${config.auto_sync_cron} (${config.auto_sync_timezone})`}
                               size="small"
                               sx={{
                                 height: 24,
