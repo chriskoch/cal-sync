@@ -3,14 +3,13 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Container,
   Box,
-  Button,
-  Typography,
-  Card,
   Alert,
 } from '@mui/material';
 import { Google } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
 import { oauthAPI } from '../services/api';
+import { InfoCard, PrimaryButton, TypographyLabel } from '../components/common';
+import { APP_COLORS } from '../constants/colors';
 
 export default function Login() {
   const [error, setError] = useState('');
@@ -56,7 +55,7 @@ export default function Login() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        bgcolor: '#f8f9fa',
+        bgcolor: APP_COLORS.surface.background,
       }}
     >
       <Container maxWidth="sm">
@@ -67,41 +66,34 @@ export default function Login() {
             alignItems: 'center',
           }}
         >
-          <Card
-            elevation={0}
+          <InfoCard
             sx={{
               p: 5,
               width: '100%',
-              border: '1px solid',
-              borderColor: 'divider',
-              borderRadius: 3,
-              bgcolor: 'white',
             }}
           >
             <Box sx={{ textAlign: 'center', mb: 4 }}>
-              <Typography
+              <TypographyLabel
                 component="h1"
                 sx={{
                   fontSize: '32px',
                   fontWeight: 400,
-                  color: '#202124',
                   mb: 1,
                   letterSpacing: '-0.5px',
                 }}
               >
                 Calendar Sync
-              </Typography>
-              <Typography
-                variant="h6"
+              </TypographyLabel>
+              <TypographyLabel
+                variant="label"
                 sx={{
                   fontSize: '18px',
                   fontWeight: 400,
-                  color: '#5f6368',
                   letterSpacing: '-0.2px',
                 }}
               >
                 Sign in with Google
-              </Typography>
+              </TypographyLabel>
             </Box>
 
             {error && (
@@ -117,11 +109,9 @@ export default function Login() {
             )}
 
             <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-              <Typography
-                variant="body2"
+              <TypographyLabel
+                variant="caption"
                 sx={{
-                  fontSize: '13px',
-                  color: '#5f6368',
                   textAlign: 'center',
                   lineHeight: 1.6,
                   mb: 3,
@@ -130,35 +120,22 @@ export default function Login() {
                 Your Google account will become Account 1.
                 <br />
                 After signing in, you'll connect Account 2 and select which calendars to sync.
-              </Typography>
+              </TypographyLabel>
 
-              <Button
-                variant="contained"
+              <PrimaryButton
                 fullWidth
                 startIcon={<Google />}
                 onClick={handleGoogleLogin}
                 disabled={loading}
                 sx={{
-                  textTransform: 'none',
-                  fontSize: '14px',
-                  fontWeight: 500,
-                  borderRadius: 2,
                   py: 1.5,
                   mb: 2,
-                  bgcolor: '#1a73e8',
-                  '&:hover': {
-                    bgcolor: '#1765cc',
-                  },
-                  '&:disabled': {
-                    bgcolor: '#dadce0',
-                    color: '#5f6368',
-                  },
                 }}
               >
                 {loading ? 'Connecting...' : 'Sign in with Google'}
-              </Button>
+              </PrimaryButton>
             </Box>
-          </Card>
+          </InfoCard>
         </Box>
       </Container>
     </Box>

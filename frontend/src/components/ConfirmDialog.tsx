@@ -1,14 +1,12 @@
 import {
-  Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
-  Button,
-  Typography,
   Box,
-  IconButton,
 } from '@mui/material';
 import { Close, Warning } from '@mui/icons-material';
+import { StyledDialog, StyledIconButton, SecondaryButton, PrimaryButton, TypographyLabel } from './common';
+import { APP_COLORS } from '../constants/colors';
 
 interface ConfirmDialogProps {
   open: boolean;
@@ -32,19 +30,11 @@ export default function ConfirmDialog({
   loading = false,
 }: ConfirmDialogProps) {
   return (
-    <Dialog
+    <StyledDialog
       open={open}
       onClose={onClose}
       maxWidth="xs"
       fullWidth
-      PaperProps={{
-        elevation: 0,
-        sx: {
-          borderRadius: 3,
-          border: '1px solid',
-          borderColor: 'divider',
-        },
-      }}
     >
       <DialogTitle sx={{ pb: 2 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -52,87 +42,61 @@ export default function ConfirmDialog({
             <Warning
               sx={{
                 fontSize: 24,
-                color: confirmColor === 'error' ? '#d93025' : '#1a73e8',
+                color: confirmColor === 'error' ? APP_COLORS.status.error : APP_COLORS.brand.primary,
               }}
             />
-            <Typography
-              variant="h6"
+            <TypographyLabel
               sx={{
                 fontSize: '18px',
                 fontWeight: 400,
-                color: '#202124',
                 letterSpacing: '-0.2px',
               }}
             >
               {title}
-            </Typography>
+            </TypographyLabel>
           </Box>
-          <IconButton
+          <StyledIconButton
             onClick={onClose}
             size="small"
             disabled={loading}
-            sx={{
-              color: '#5f6368',
-              '&:hover': { bgcolor: 'rgba(0, 0, 0, 0.04)' },
-            }}
           >
             <Close fontSize="small" />
-          </IconButton>
+          </StyledIconButton>
         </Box>
       </DialogTitle>
 
       <DialogContent sx={{ px: 3, pb: 2 }}>
-        <Typography
+        <TypographyLabel
+          variant="label"
           sx={{
-            fontSize: '14px',
-            color: '#5f6368',
             lineHeight: 1.6,
           }}
         >
           {message}
-        </Typography>
+        </TypographyLabel>
       </DialogContent>
 
       <DialogActions sx={{ px: 3, pb: 3, pt: 0 }}>
-        <Button
+        <SecondaryButton
           onClick={onClose}
           disabled={loading}
-          sx={{
-            textTransform: 'none',
-            fontSize: '14px',
-            fontWeight: 500,
-            borderRadius: 2,
-            color: '#5f6368',
-            '&:hover': {
-              bgcolor: 'rgba(0, 0, 0, 0.04)',
-            },
-          }}
         >
           Cancel
-        </Button>
-        <Button
+        </SecondaryButton>
+        <PrimaryButton
           onClick={onConfirm}
-          variant="contained"
           disabled={loading}
           sx={{
-            textTransform: 'none',
-            fontSize: '14px',
-            fontWeight: 500,
-            borderRadius: 2,
             px: 3,
-            bgcolor: confirmColor === 'error' ? '#d93025' : '#1a73e8',
+            bgcolor: confirmColor === 'error' ? APP_COLORS.status.error : APP_COLORS.brand.primary,
             '&:hover': {
-              bgcolor: confirmColor === 'error' ? '#b3190f' : '#1765cc',
-            },
-            '&:disabled': {
-              bgcolor: '#dadce0',
-              color: '#5f6368',
+              bgcolor: confirmColor === 'error' ? APP_COLORS.status.errorHover : APP_COLORS.brand.primaryHover,
             },
           }}
         >
           {loading ? 'Deleting...' : confirmText}
-        </Button>
+        </PrimaryButton>
       </DialogActions>
-    </Dialog>
+    </StyledDialog>
   );
 }

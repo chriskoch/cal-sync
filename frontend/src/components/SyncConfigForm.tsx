@@ -2,8 +2,6 @@ import { useState } from 'react';
 import {
   Box,
   Typography,
-  Button,
-  TextField,
   Alert,
   Grid,
   FormControl,
@@ -12,27 +10,104 @@ import {
   MenuItem,
   Switch,
   FormControlLabel,
-  Chip,
   Divider,
-  Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
-  IconButton,
-  Card,
   Link,
   ToggleButtonGroup,
   ToggleButton,
 } from '@mui/material';
-import { PlayArrow, Circle, Lock, Close, Add, ArrowForward, SyncAlt } from '@mui/icons-material';
+import { PlayArrow, Lock, Close, Add, ArrowForward, SyncAlt } from '@mui/icons-material';
 import CalendarSelector from './CalendarSelector';
 import ColorPicker from './ColorPicker';
 import { syncAPI, SyncConfig } from '../services/api';
-import { CALENDAR_COLORS } from '../constants/colors';
+import { CALENDAR_COLORS, APP_COLORS } from '../constants/colors';
+import {
+  StyledDialog,
+  StyledIconButton,
+  PrimaryButton,
+  SecondaryButton,
+  StyledTextField,
+  InfoCard,
+  SmallChip,
+  TypographyLabel,
+} from './common';
 
 interface SyncConfigFormProps {
   onConfigCreated?: (config: SyncConfig) => void;
 }
+
+const styles = {
+  toggleButton: {
+    textTransform: 'none',
+    py: 1.5,
+    px: 2,
+    border: `1px solid ${APP_COLORS.surface.border}`,
+    color: APP_COLORS.text.secondary,
+    bgcolor: 'white',
+    '&:hover': {
+      bgcolor: APP_COLORS.surface.background,
+    },
+    '&.Mui-selected': {
+      bgcolor: APP_COLORS.brand.primary,
+      color: 'white',
+      border: `1px solid ${APP_COLORS.brand.primary}`,
+      '&:hover': {
+        bgcolor: APP_COLORS.brand.secondary,
+      },
+    },
+  },
+  helperText: {
+    mt: 1,
+    fontSize: '13px',
+    color: APP_COLORS.text.secondary,
+  },
+  sectionHeader: {
+    fontSize: '15px',
+    fontWeight: 600,
+    color: APP_COLORS.text.primary,
+    mb: 2,
+    display: 'flex',
+    alignItems: 'center',
+    gap: 1,
+  },
+  headerAccent: {
+    width: 4,
+    height: 20,
+    bgcolor: APP_COLORS.brand.primary,
+    borderRadius: 1,
+  },
+  privacyCardTitle: {
+    fontSize: '14px',
+    fontWeight: 500,
+    color: APP_COLORS.text.primary,
+    mb: 1.5,
+  },
+  privacyCardDescription: {
+    fontSize: '13px',
+    color: APP_COLORS.text.secondary,
+    mb: 1.5,
+  },
+  switchLabel: {
+    fontSize: '14px',
+    color: APP_COLORS.text.primary,
+  },
+  captionText: {
+    display: 'block',
+    mt: 0.5,
+    ml: 1.75,
+    color: APP_COLORS.text.secondary,
+    fontSize: '12px',
+  },
+  link: {
+    color: APP_COLORS.brand.primary,
+    textDecoration: 'none',
+    '&:hover': {
+      textDecoration: 'underline',
+    },
+  },
+} as const;
 
 export default function SyncConfigForm({ onConfigCreated }: SyncConfigFormProps) {
   const [open, setOpen] = useState(false);
@@ -149,74 +224,49 @@ export default function SyncConfigForm({ onConfigCreated }: SyncConfigFormProps)
   return (
     <>
       {/* Trigger Button */}
-      <Button
-        variant="contained"
+      <PrimaryButton
         startIcon={<Add />}
         onClick={handleOpen}
-        sx={{
-          textTransform: 'none',
-          fontSize: '14px',
-          fontWeight: 500,
-          borderRadius: 2,
-          px: 3,
-          bgcolor: '#1a73e8',
-          '&:hover': {
-            bgcolor: '#1765cc',
-          },
-        }}
+        sx={{ px: 3 }}
       >
         Create new sync
-      </Button>
+      </PrimaryButton>
 
       {/* Modal Dialog */}
-      <Dialog
+      <StyledDialog
         open={open}
         onClose={handleClose}
         maxWidth="md"
         fullWidth
-        PaperProps={{
-          elevation: 0,
-          sx: {
-            borderRadius: 3,
-            border: '1px solid',
-            borderColor: 'divider',
-          },
-        }}
       >
         <DialogTitle sx={{ pb: 2 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <Typography
-              variant="h6"
+            <TypographyLabel
+              variant="heading"
               sx={{
                 fontSize: '20px',
                 fontWeight: 400,
-                color: '#202124',
                 letterSpacing: '-0.2px',
               }}
             >
               Create new sync
-            </Typography>
-            <IconButton
+            </TypographyLabel>
+            <StyledIconButton
               onClick={handleClose}
               size="small"
-              sx={{
-                color: '#5f6368',
-                '&:hover': { bgcolor: 'rgba(0, 0, 0, 0.04)' },
-              }}
             >
               <Close fontSize="small" />
-            </IconButton>
+            </StyledIconButton>
           </Box>
-          <Typography
-            variant="body2"
+          <TypographyLabel
+            variant="label"
             sx={{
               fontSize: '14px',
-              color: '#5f6368',
               mt: 0.5,
             }}
           >
             Select calendars from your connected accounts. Events will sync between them.
-          </Typography>
+          </TypographyLabel>
         </DialogTitle>
 
         <DialogContent sx={{ px: 3, pb: 2 }}>
@@ -246,25 +296,7 @@ export default function SyncConfigForm({ onConfigCreated }: SyncConfigFormProps)
                   }}
                   fullWidth
                   sx={{
-                    '& .MuiToggleButton-root': {
-                      textTransform: 'none',
-                      py: 1.5,
-                      px: 2,
-                      border: '1px solid #dadce0',
-                      color: '#5f6368',
-                      bgcolor: 'white',
-                      '&:hover': {
-                        bgcolor: '#f8f9fa',
-                      },
-                      '&.Mui-selected': {
-                        bgcolor: '#1a73e8',
-                        color: 'white',
-                        border: '1px solid #1a73e8',
-                        '&:hover': {
-                          bgcolor: '#1765cc',
-                        },
-                      },
-                    },
+                    '& .MuiToggleButton-root': styles.toggleButton,
                   }}
                 >
                   <ToggleButton value="oneway">
@@ -285,18 +317,14 @@ export default function SyncConfigForm({ onConfigCreated }: SyncConfigFormProps)
                   </ToggleButton>
                 </ToggleButtonGroup>
 
-                <Typography
-                  variant="body2"
-                  sx={{
-                    mt: 1,
-                    fontSize: '13px',
-                    color: '#5f6368',
-                  }}
+                <TypographyLabel
+                  variant="caption"
+                  sx={styles.helperText}
                 >
                   {enableBidirectional
                     ? 'Events will sync in both directions between the selected calendars'
                     : 'Events will sync from Account 1 to Account 2 only'}
-                </Typography>
+                </TypographyLabel>
               </Grid>
 
               {/* Calendar Selectors */}
@@ -370,7 +398,7 @@ export default function SyncConfigForm({ onConfigCreated }: SyncConfigFormProps)
               )}
 
               <Grid item xs={12} md={enableBidirectional ? 12 : 6}>
-                <TextField
+                <StyledTextField
                   fullWidth
                   type="number"
                   label="Sync lookahead days"
@@ -378,71 +406,38 @@ export default function SyncConfigForm({ onConfigCreated }: SyncConfigFormProps)
                   onChange={(e) => setSyncLookaheadDays(Number(e.target.value))}
                   helperText="How many days in the future to sync"
                   inputProps={{ min: 1, max: 365 }}
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      '& fieldset': {
-                        borderColor: '#dadce0',
-                      },
-                      '&:hover fieldset': {
-                        borderColor: '#1967d2',
-                      },
-                    },
-                  }}
                 />
               </Grid>
 
               {/* Privacy Settings */}
               <Grid item xs={12}>
                 <Divider sx={{ my: 1 }}>
-                  <Chip
+                  <SmallChip
                     icon={<Lock sx={{ fontSize: 16 }} />}
                     label="Privacy settings"
-                    sx={{
-                      fontSize: '13px',
-                      height: 28,
-                      bgcolor: '#f1f3f4',
-                      color: '#5f6368',
-                      border: 'none',
-                    }}
                   />
                 </Divider>
               </Grid>
 
               {/* Business→Private Privacy */}
               <Grid item xs={12} md={enableBidirectional ? 6 : 12}>
-                <Card
-                  elevation={0}
-                  sx={{
-                    border: '1px solid #dadce0',
-                    borderRadius: 2,
-                    bgcolor: '#f8f9fa',
-                  }}
-                >
+                <InfoCard variant="bordered">
                   <Box sx={{ p: 2.5 }}>
-                    <Typography
-                      variant="subtitle2"
-                      sx={{
-                        fontSize: '14px',
-                        fontWeight: 500,
-                        color: '#202124',
-                        mb: 1.5,
-                      }}
+                    <TypographyLabel
+                      variant="subheading"
+                      sx={styles.privacyCardTitle}
                     >
                       {enableBidirectional
                         ? `${sourceCalendarName || 'Account 1'} → ${destCalendarName || 'Account 2'}`
                         : 'Privacy mode'}
-                    </Typography>
+                    </TypographyLabel>
 
-                    <Typography
-                      variant="body2"
-                      sx={{
-                        fontSize: '13px',
-                        color: '#5f6368',
-                        mb: 1.5,
-                      }}
+                    <TypographyLabel
+                      variant="caption"
+                      sx={styles.privacyCardDescription}
                     >
                       Share your availability without revealing event details
-                    </Typography>
+                    </TypographyLabel>
 
                     <FormControlLabel
                       control={
@@ -452,23 +447,23 @@ export default function SyncConfigForm({ onConfigCreated }: SyncConfigFormProps)
                           size="small"
                           sx={{
                             '& .MuiSwitch-switchBase.Mui-checked': {
-                              color: '#1a73e8',
+                              color: APP_COLORS.brand.primary,
                             },
                             '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
-                              backgroundColor: '#1a73e8',
+                              backgroundColor: APP_COLORS.brand.primary,
                             },
                           }}
                         />
                       }
                       label={
-                        <Typography sx={{ fontSize: '14px', color: '#202124' }}>
+                        <TypographyLabel variant="body" sx={styles.switchLabel}>
                           Hide event details
-                        </Typography>
+                        </TypographyLabel>
                       }
                     />
 
                     {privacyModeEnabled && (
-                      <TextField
+                      <StyledTextField
                         fullWidth
                         label="Placeholder text"
                         value={privacyPlaceholderText}
@@ -478,14 +473,6 @@ export default function SyncConfigForm({ onConfigCreated }: SyncConfigFormProps)
                         sx={{
                           mt: 2,
                           bgcolor: 'white',
-                          '& .MuiOutlinedInput-root': {
-                            '& fieldset': {
-                              borderColor: '#dadce0',
-                            },
-                            '&:hover fieldset': {
-                              borderColor: '#1967d2',
-                            },
-                          },
                         }}
                       />
                     )}
@@ -505,43 +492,27 @@ export default function SyncConfigForm({ onConfigCreated }: SyncConfigFormProps)
                       Event titles, descriptions, and locations will be replaced with your placeholder text. Times remain visible for calendar blocking.
                     </Alert>
                   </Box>
-                </Card>
+                </InfoCard>
               </Grid>
 
               {/* Private→Business Privacy */}
               {enableBidirectional && (
                 <Grid item xs={12} md={6}>
-                  <Card
-                    elevation={0}
-                    sx={{
-                      border: '1px solid #dadce0',
-                      borderRadius: 2,
-                      bgcolor: '#f8f9fa',
-                    }}
-                  >
+                  <InfoCard variant="bordered">
                     <Box sx={{ p: 2.5 }}>
-                      <Typography
-                        variant="subtitle2"
-                        sx={{
-                          fontSize: '14px',
-                          fontWeight: 500,
-                          color: '#202124',
-                          mb: 1.5,
-                        }}
+                      <TypographyLabel
+                        variant="subheading"
+                        sx={styles.privacyCardTitle}
                       >
                         {destCalendarName || 'Account 2'} → {sourceCalendarName || 'Account 1'}
-                      </Typography>
+                      </TypographyLabel>
 
-                      <Typography
-                        variant="body2"
-                        sx={{
-                          fontSize: '13px',
-                          color: '#5f6368',
-                          mb: 1.5,
-                        }}
+                      <TypographyLabel
+                        variant="caption"
+                        sx={styles.privacyCardDescription}
                       >
                         Share your availability without revealing event details
-                      </Typography>
+                      </TypographyLabel>
 
                       <FormControlLabel
                         control={
@@ -551,23 +522,23 @@ export default function SyncConfigForm({ onConfigCreated }: SyncConfigFormProps)
                             size="small"
                             sx={{
                               '& .MuiSwitch-switchBase.Mui-checked': {
-                                color: '#1a73e8',
+                                color: APP_COLORS.brand.primary,
                               },
                               '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
-                                backgroundColor: '#1a73e8',
+                                backgroundColor: APP_COLORS.brand.primary,
                               },
                             }}
                           />
                         }
                         label={
-                          <Typography sx={{ fontSize: '14px', color: '#202124' }}>
+                          <TypographyLabel variant="body" sx={styles.switchLabel}>
                             Hide event details
-                          </Typography>
+                          </TypographyLabel>
                         }
                       />
 
                       {reversePrivacyModeEnabled && (
-                        <TextField
+                        <StyledTextField
                           fullWidth
                           label="Placeholder text"
                           value={reversePrivacyPlaceholderText}
@@ -577,68 +548,33 @@ export default function SyncConfigForm({ onConfigCreated }: SyncConfigFormProps)
                           sx={{
                             mt: 2,
                             bgcolor: 'white',
-                            '& .MuiOutlinedInput-root': {
-                              '& fieldset': {
-                                borderColor: '#dadce0',
-                              },
-                              '&:hover fieldset': {
-                                borderColor: '#1967d2',
-                              },
-                            },
                           }}
                         />
                       )}
                     </Box>
-                  </Card>
+                  </InfoCard>
                 </Grid>
               )}
 
               {/* Auto-sync Scheduling */}
               <Grid item xs={12}>
                 <Divider sx={{ my: 2 }} />
-                <Typography
-                  variant="subtitle2"
-                  sx={{
-                    fontSize: '15px',
-                    fontWeight: 600,
-                    color: '#202124',
-                    mb: 2,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 1,
-                  }}
+                <TypographyLabel
+                  variant="subheading"
+                  sx={styles.sectionHeader}
                 >
-                  <Box
-                    component="span"
-                    sx={{
-                      width: 4,
-                      height: 20,
-                      bgcolor: '#1a73e8',
-                      borderRadius: 1,
-                    }}
-                  />
+                  <Box component="span" sx={styles.headerAccent} />
                   Automatic Syncing
-                </Typography>
+                </TypographyLabel>
 
-                <Card
-                  elevation={0}
-                  sx={{
-                    border: '1px solid #dadce0',
-                    borderRadius: 2,
-                    bgcolor: '#f8f9fa',
-                  }}
-                >
+                <InfoCard variant="bordered">
                   <Box sx={{ p: 2.5 }}>
-                    <Typography
-                      variant="body2"
-                      sx={{
-                        fontSize: '13px',
-                        color: '#5f6368',
-                        mb: 1.5,
-                      }}
+                    <TypographyLabel
+                      variant="caption"
+                      sx={styles.privacyCardDescription}
                     >
                       Schedule automatic syncs using cron expressions
-                    </Typography>
+                    </TypographyLabel>
 
                     <FormControlLabel
                       control={
@@ -648,25 +584,25 @@ export default function SyncConfigForm({ onConfigCreated }: SyncConfigFormProps)
                           size="small"
                           sx={{
                             '& .MuiSwitch-switchBase.Mui-checked': {
-                              color: '#1a73e8',
+                              color: APP_COLORS.brand.primary,
                             },
                             '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
-                              backgroundColor: '#1a73e8',
+                              backgroundColor: APP_COLORS.brand.primary,
                             },
                           }}
                         />
                       }
                       label={
-                        <Typography sx={{ fontSize: '14px', color: '#202124' }}>
+                        <TypographyLabel variant="body" sx={styles.switchLabel}>
                           Enable automatic syncing
-                        </Typography>
+                        </TypographyLabel>
                       }
                     />
 
                     {autoSyncEnabled && (
                       <>
                         <Box>
-                          <TextField
+                          <StyledTextField
                             fullWidth
                             label="Cron Schedule"
                             value={cronExpression}
@@ -675,38 +611,18 @@ export default function SyncConfigForm({ onConfigCreated }: SyncConfigFormProps)
                             sx={{
                               mt: 2,
                               bgcolor: 'white',
-                              '& .MuiOutlinedInput-root': {
-                                '& fieldset': {
-                                  borderColor: '#dadce0',
-                                },
-                                '&:hover fieldset': {
-                                  borderColor: '#1967d2',
-                                },
-                              },
                             }}
                           />
                           <Typography
                             variant="caption"
-                            sx={{
-                              display: 'block',
-                              mt: 0.5,
-                              ml: 1.75,
-                              color: '#5f6368',
-                              fontSize: '12px',
-                            }}
+                            sx={styles.captionText}
                           >
                             e.g., '0 */6 * * *' for every 6 hours, '0 0 * * *' for daily at midnight.{' '}
                             <Link
                               href="https://crontab.cronhub.io/"
                               target="_blank"
                               rel="noopener noreferrer"
-                              sx={{
-                                color: '#1a73e8',
-                                textDecoration: 'none',
-                                '&:hover': {
-                                  textDecoration: 'underline',
-                                },
-                              }}
+                              sx={styles.link}
                             >
                               Need help? Use cron expression builder
                             </Link>
@@ -721,10 +637,10 @@ export default function SyncConfigForm({ onConfigCreated }: SyncConfigFormProps)
                             bgcolor: 'white',
                             '& .MuiOutlinedInput-root': {
                               '& fieldset': {
-                                borderColor: '#dadce0',
+                                borderColor: APP_COLORS.surface.border,
                               },
                               '&:hover fieldset': {
-                                borderColor: '#1967d2',
+                                borderColor: APP_COLORS.brand.secondary,
                               },
                             },
                           }}
@@ -750,54 +666,27 @@ export default function SyncConfigForm({ onConfigCreated }: SyncConfigFormProps)
                       </>
                     )}
                   </Box>
-                </Card>
+                </InfoCard>
               </Grid>
             </Grid>
           </form>
         </DialogContent>
 
         <DialogActions sx={{ px: 3, pb: 3, pt: 2 }}>
-          <Button
-            onClick={handleClose}
-            sx={{
-              textTransform: 'none',
-              fontSize: '14px',
-              fontWeight: 500,
-              borderRadius: 2,
-              color: '#5f6368',
-              '&:hover': {
-                bgcolor: 'rgba(0, 0, 0, 0.04)',
-              },
-            }}
-          >
+          <SecondaryButton onClick={handleClose}>
             Cancel
-          </Button>
-          <Button
+          </SecondaryButton>
+          <PrimaryButton
             type="submit"
             form="sync-config-form"
-            variant="contained"
             startIcon={<PlayArrow />}
             disabled={loading || !sourceCalendarId || !destCalendarId}
-            sx={{
-              textTransform: 'none',
-              fontSize: '14px',
-              fontWeight: 500,
-              borderRadius: 2,
-              px: 3,
-              bgcolor: '#1a73e8',
-              '&:hover': {
-                bgcolor: '#1765cc',
-              },
-              '&:disabled': {
-                bgcolor: '#dadce0',
-                color: '#5f6368',
-              },
-            }}
+            sx={{ px: 3 }}
           >
             {loading ? 'Creating...' : 'Create sync'}
-          </Button>
+          </PrimaryButton>
         </DialogActions>
-      </Dialog>
+      </StyledDialog>
     </>
   );
 }

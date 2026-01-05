@@ -5,12 +5,12 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  Typography,
-  CircularProgress,
   Alert,
   SelectChangeEvent,
 } from '@mui/material';
 import { calendarsAPI, CalendarItem } from '../services/api';
+import { LoadingBox, TypographyLabel } from './common';
+import { APP_COLORS } from '../constants/colors';
 
 interface CalendarSelectorProps {
   accountType: 'source' | 'destination';
@@ -54,24 +54,7 @@ export default function CalendarSelector({
   };
 
   if (loading) {
-    return (
-      <Box
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          p: 3,
-          bgcolor: '#f8f9fa',
-          borderRadius: 2,
-          border: '1px solid #dadce0',
-        }}
-      >
-        <CircularProgress size={20} sx={{ mr: 2, color: '#1a73e8' }} />
-        <Typography sx={{ fontSize: '14px', color: '#5f6368' }}>
-          Loading calendars...
-        </Typography>
-      </Box>
-    );
+    return <LoadingBox message="Loading calendars..." size={20} />;
   }
 
   if (error) {
@@ -101,13 +84,13 @@ export default function CalendarSelector({
         onChange={handleChange}
         sx={{
           '& .MuiOutlinedInput-notchedOutline': {
-            borderColor: '#dadce0',
+            borderColor: APP_COLORS.surface.border,
           },
           '&:hover .MuiOutlinedInput-notchedOutline': {
-            borderColor: '#1967d2',
+            borderColor: APP_COLORS.brand.secondary,
           },
           '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-            borderColor: '#1a73e8',
+            borderColor: APP_COLORS.brand.primary,
           },
         }}
       >
@@ -117,25 +100,22 @@ export default function CalendarSelector({
         {calendars.map((calendar) => (
           <MenuItem key={calendar.id} value={calendar.id}>
             <Box>
-              <Typography
+              <TypographyLabel
                 sx={{
-                  fontSize: '14px',
-                  color: '#202124',
                   fontWeight: calendar.is_primary ? 500 : 400,
                 }}
               >
                 {calendar.summary}
-              </Typography>
+              </TypographyLabel>
               {calendar.is_primary && (
-                <Typography
+                <TypographyLabel
                   variant="caption"
                   sx={{
-                    color: '#1967d2',
-                    fontSize: '12px',
+                    color: APP_COLORS.brand.secondary,
                   }}
                 >
                   Primary calendar
-                </Typography>
+                </TypographyLabel>
               )}
             </Box>
           </MenuItem>

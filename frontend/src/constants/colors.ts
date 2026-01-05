@@ -34,3 +34,56 @@ export const CALENDAR_COLORS_MAP: { [key: string]: { name: string; color: string
     acc[color.id] = { name: color.name, color: color.color };
     return acc;
   }, {} as { [key: string]: { name: string; color: string } });
+
+/**
+ * Application color palette
+ * Centralized color constants following Google Material Design color system
+ * All hard-coded colors should reference these constants for consistency
+ */
+export const APP_COLORS = {
+  // Text colors
+  text: {
+    primary: '#202124',
+    secondary: '#5f6368',
+    tertiary: '#80868b',
+  },
+
+  // Brand colors
+  brand: {
+    primary: '#1a73e8',
+    primaryHover: '#1765cc',
+    secondary: '#1967d2',
+  },
+
+  // Status colors
+  status: {
+    success: '#1e8e3e',
+    successBg: '#e6f4ea',
+    error: '#d93025',
+    errorBg: '#fce8e6',
+    errorHover: '#b3190f',
+    warning: '#ea8600',
+    info: '#1967d2',
+    infoBg: '#e8f0fe',
+  },
+
+  // Surface colors
+  surface: {
+    background: '#f8f9fa',
+    paper: '#ffffff',
+    border: '#dadce0',
+    borderLight: '#f1f3f4',
+    hover: 'rgba(0, 0, 0, 0.04)',
+    hoverBlue: 'rgba(26, 115, 232, 0.04)',
+    hoverRed: 'rgba(217, 48, 37, 0.04)',
+  },
+
+  // Component-specific
+  disabled: {
+    bg: '#dadce0',
+    text: '#5f6368',
+  },
+} as const;
+
+// Type export for TypeScript autocompletion
+export type AppColors = typeof APP_COLORS;

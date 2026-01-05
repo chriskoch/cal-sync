@@ -1,24 +1,21 @@
 import { useState, useEffect } from 'react';
 import {
-  Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
-  Button,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
   TableRow,
-  Chip,
-  Typography,
   Box,
   CircularProgress,
-  IconButton,
 } from '@mui/material';
 import { CheckCircle, Error as ErrorIcon, History, Close, Refresh } from '@mui/icons-material';
 import { syncAPI, SyncLog } from '../services/api';
+import { StyledDialog, StyledIconButton, SecondaryButton, SmallChip, TypographyLabel } from './common';
+import { APP_COLORS } from '../constants/colors';
 
 interface SyncHistoryDialogProps {
   open: boolean;
@@ -64,117 +61,71 @@ export default function SyncHistoryDialog({ open, onClose, configId }: SyncHisto
     switch (status) {
       case 'success':
         return (
-          <Chip
+          <SmallChip
+            variant="status-success"
             icon={<CheckCircle sx={{ fontSize: 16 }} />}
             label="Success"
-            size="small"
-            sx={{
-              bgcolor: '#e6f4ea',
-              color: '#1e8e3e',
-              border: 'none',
-              height: 24,
-              fontSize: '12px',
-            }}
           />
         );
       case 'failed':
         return (
-          <Chip
+          <SmallChip
+            variant="status-error"
             icon={<ErrorIcon sx={{ fontSize: 16 }} />}
             label="Failed"
-            size="small"
-            sx={{
-              bgcolor: '#fce8e6',
-              color: '#d93025',
-              border: 'none',
-              height: 24,
-              fontSize: '12px',
-            }}
           />
         );
       case 'running':
         return (
-          <Chip
+          <SmallChip
+            variant="status-running"
             label="Running"
-            size="small"
-            sx={{
-              bgcolor: '#e8f0fe',
-              color: '#1967d2',
-              border: 'none',
-              height: 24,
-              fontSize: '12px',
-            }}
           />
         );
       default:
         return (
-          <Chip
+          <SmallChip
+            variant="status-inactive"
             label={status}
-            size="small"
-            sx={{
-              bgcolor: '#f1f3f4',
-              color: '#5f6368',
-              border: 'none',
-              height: 24,
-              fontSize: '12px',
-            }}
           />
         );
     }
   };
 
   return (
-    <Dialog
+    <StyledDialog
       open={open}
       onClose={onClose}
       maxWidth="lg"
       fullWidth
-      PaperProps={{
-        elevation: 0,
-        sx: {
-          borderRadius: 3,
-          border: '1px solid',
-          borderColor: 'divider',
-        },
-      }}
     >
       <DialogTitle sx={{ pb: 2 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-            <History sx={{ fontSize: 24, color: '#5f6368' }} />
-            <Typography
-              variant="h6"
+            <History sx={{ fontSize: 24, color: APP_COLORS.text.secondary }} />
+            <TypographyLabel
               sx={{
                 fontSize: '20px',
                 fontWeight: 400,
-                color: '#202124',
                 letterSpacing: '-0.2px',
               }}
             >
               Sync history
-            </Typography>
+            </TypographyLabel>
           </Box>
           <Box sx={{ display: 'flex', gap: 1 }}>
-            <IconButton
+            <StyledIconButton
               onClick={fetchLogs}
               size="small"
-              sx={{
-                color: '#5f6368',
-                '&:hover': { bgcolor: 'rgba(0, 0, 0, 0.04)' },
-              }}
             >
               <Refresh fontSize="small" />
-            </IconButton>
-            <IconButton
+            </StyledIconButton>
+            <StyledIconButton
               onClick={onClose}
               size="small"
-              sx={{
-                color: '#5f6368',
-                '&:hover': { bgcolor: 'rgba(0, 0, 0, 0.04)' },
-              }}
             >
               <Close fontSize="small" />
-            </IconButton>
+            </StyledIconButton>
           </Box>
         </Box>
       </DialogTitle>
@@ -182,49 +133,49 @@ export default function SyncHistoryDialog({ open, onClose, configId }: SyncHisto
       <DialogContent sx={{ px: 3, pb: 3 }}>
         {loading ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 8 }}>
-            <CircularProgress size={32} sx={{ color: '#1a73e8' }} />
+            <CircularProgress size={32} sx={{ color: APP_COLORS.brand.primary }} />
           </Box>
         ) : error ? (
           <Box
             sx={{
               py: 6,
               textAlign: 'center',
-              bgcolor: '#fce8e6',
+              bgcolor: APP_COLORS.status.errorBg,
               borderRadius: 2,
             }}
           >
-            <Typography sx={{ color: '#d93025', fontSize: '14px' }}>{error}</Typography>
+            <TypographyLabel variant="label" sx={{ color: APP_COLORS.status.error }}>{error}</TypographyLabel>
           </Box>
         ) : logs.length === 0 ? (
           <Box
             sx={{
               py: 6,
               textAlign: 'center',
-              bgcolor: '#f8f9fa',
+              bgcolor: APP_COLORS.surface.background,
               borderRadius: 2,
             }}
           >
-            <Typography sx={{ color: '#5f6368', fontSize: '14px' }}>
+            <TypographyLabel variant="label">
               No sync history available
-            </Typography>
+            </TypographyLabel>
           </Box>
         ) : (
           <TableContainer
             sx={{
-              border: '1px solid #dadce0',
+              border: `1px solid ${APP_COLORS.surface.border}`,
               borderRadius: 2,
               bgcolor: 'white',
             }}
           >
             <Table>
               <TableHead>
-                <TableRow sx={{ bgcolor: '#f8f9fa' }}>
+                <TableRow sx={{ bgcolor: APP_COLORS.surface.background }}>
                   <TableCell
                     sx={{
                       fontSize: '13px',
                       fontWeight: 500,
-                      color: '#5f6368',
-                      borderBottom: '1px solid #dadce0',
+                      color: APP_COLORS.text.secondary,
+                      borderBottom: `1px solid ${APP_COLORS.surface.border}`,
                     }}
                   >
                     Started At
@@ -233,8 +184,8 @@ export default function SyncHistoryDialog({ open, onClose, configId }: SyncHisto
                     sx={{
                       fontSize: '13px',
                       fontWeight: 500,
-                      color: '#5f6368',
-                      borderBottom: '1px solid #dadce0',
+                      color: APP_COLORS.text.secondary,
+                      borderBottom: `1px solid ${APP_COLORS.surface.border}`,
                     }}
                   >
                     Completed At
@@ -243,8 +194,8 @@ export default function SyncHistoryDialog({ open, onClose, configId }: SyncHisto
                     sx={{
                       fontSize: '13px',
                       fontWeight: 500,
-                      color: '#5f6368',
-                      borderBottom: '1px solid #dadce0',
+                      color: APP_COLORS.text.secondary,
+                      borderBottom: `1px solid ${APP_COLORS.surface.border}`,
                     }}
                   >
                     Status
@@ -254,7 +205,7 @@ export default function SyncHistoryDialog({ open, onClose, configId }: SyncHisto
                     sx={{
                       fontSize: '13px',
                       fontWeight: 500,
-                      color: '#5f6368',
+                      color: APP_COLORS.text.secondary,
                       borderBottom: '1px solid #dadce0',
                     }}
                   >
@@ -265,7 +216,7 @@ export default function SyncHistoryDialog({ open, onClose, configId }: SyncHisto
                     sx={{
                       fontSize: '13px',
                       fontWeight: 500,
-                      color: '#5f6368',
+                      color: APP_COLORS.text.secondary,
                       borderBottom: '1px solid #dadce0',
                     }}
                   >
@@ -276,7 +227,7 @@ export default function SyncHistoryDialog({ open, onClose, configId }: SyncHisto
                     sx={{
                       fontSize: '13px',
                       fontWeight: 500,
-                      color: '#5f6368',
+                      color: APP_COLORS.text.secondary,
                       borderBottom: '1px solid #dadce0',
                     }}
                   >
@@ -286,7 +237,7 @@ export default function SyncHistoryDialog({ open, onClose, configId }: SyncHisto
                     sx={{
                       fontSize: '13px',
                       fontWeight: 500,
-                      color: '#5f6368',
+                      color: APP_COLORS.text.secondary,
                       borderBottom: '1px solid #dadce0',
                     }}
                   >
@@ -300,7 +251,7 @@ export default function SyncHistoryDialog({ open, onClose, configId }: SyncHisto
                     key={log.id}
                     sx={{
                       '&:hover': {
-                        bgcolor: '#f8f9fa',
+                        bgcolor: APP_COLORS.surface.background,
                       },
                       '&:last-child td': {
                         borderBottom: 0,
@@ -310,7 +261,7 @@ export default function SyncHistoryDialog({ open, onClose, configId }: SyncHisto
                     <TableCell
                       sx={{
                         fontSize: '13px',
-                        color: '#202124',
+                        color: APP_COLORS.text.primary,
                         borderBottom: '1px solid #f1f3f4',
                       }}
                     >
@@ -319,69 +270,50 @@ export default function SyncHistoryDialog({ open, onClose, configId }: SyncHisto
                     <TableCell
                       sx={{
                         fontSize: '13px',
-                        color: '#202124',
+                        color: APP_COLORS.text.primary,
                         borderBottom: '1px solid #f1f3f4',
                       }}
                     >
                       {log.completed_at ? formatDate(log.completed_at) : (
-                        <Typography sx={{ fontSize: '13px', color: '#5f6368' }}>-</Typography>
+                        <TypographyLabel variant="caption">-</TypographyLabel>
                       )}
                     </TableCell>
                     <TableCell sx={{ borderBottom: '1px solid #f1f3f4' }}>
                       {getStatusChip(log.status)}
                     </TableCell>
                     <TableCell align="right" sx={{ borderBottom: '1px solid #f1f3f4' }}>
-                      <Chip
+                      <SmallChip
+                        variant="outlined"
                         label={log.events_created}
-                        size="small"
-                        sx={{
-                          bgcolor: 'transparent',
-                          border: '1px solid #dadce0',
-                          color: '#1e8e3e',
-                          height: 24,
-                          fontSize: '12px',
-                        }}
+                        sx={{ color: APP_COLORS.status.success }}
                       />
                     </TableCell>
                     <TableCell align="right" sx={{ borderBottom: '1px solid #f1f3f4' }}>
-                      <Chip
+                      <SmallChip
+                        variant="outlined"
                         label={log.events_updated}
-                        size="small"
-                        sx={{
-                          bgcolor: 'transparent',
-                          border: '1px solid #dadce0',
-                          color: '#1967d2',
-                          height: 24,
-                          fontSize: '12px',
-                        }}
+                        sx={{ color: APP_COLORS.brand.secondary }}
                       />
                     </TableCell>
                     <TableCell align="right" sx={{ borderBottom: '1px solid #f1f3f4' }}>
-                      <Chip
+                      <SmallChip
+                        variant="outlined"
                         label={log.events_deleted}
-                        size="small"
-                        sx={{
-                          bgcolor: 'transparent',
-                          border: '1px solid #dadce0',
-                          color: '#ea8600',
-                          height: 24,
-                          fontSize: '12px',
-                        }}
+                        sx={{ color: APP_COLORS.status.warning }}
                       />
                     </TableCell>
                     <TableCell sx={{ borderBottom: '1px solid #f1f3f4' }}>
                       {log.error_message ? (
-                        <Typography
+                        <TypographyLabel
                           variant="caption"
                           sx={{
-                            color: '#d93025',
-                            fontSize: '12px',
+                            color: APP_COLORS.status.error,
                           }}
                         >
                           {log.error_message}
-                        </Typography>
+                        </TypographyLabel>
                       ) : (
-                        <Typography sx={{ fontSize: '13px', color: '#5f6368' }}>-</Typography>
+                        <TypographyLabel variant="caption">-</TypographyLabel>
                       )}
                     </TableCell>
                   </TableRow>
@@ -393,22 +325,10 @@ export default function SyncHistoryDialog({ open, onClose, configId }: SyncHisto
       </DialogContent>
 
       <DialogActions sx={{ px: 3, pb: 3, pt: 0 }}>
-        <Button
-          onClick={onClose}
-          sx={{
-            textTransform: 'none',
-            fontSize: '14px',
-            fontWeight: 500,
-            borderRadius: 2,
-            color: '#1967d2',
-            '&:hover': {
-              bgcolor: 'rgba(26, 115, 232, 0.04)',
-            },
-          }}
-        >
+        <SecondaryButton onClick={onClose}>
           Close
-        </Button>
+        </SecondaryButton>
       </DialogActions>
-    </Dialog>
+    </StyledDialog>
   );
 }

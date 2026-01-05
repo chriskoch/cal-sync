@@ -1,6 +1,6 @@
 import { Box, Typography } from '@mui/material';
 import { Check } from '@mui/icons-material';
-import { CALENDAR_COLORS } from '../constants/colors';
+import { CALENDAR_COLORS, APP_COLORS } from '../constants/colors';
 
 interface ColorPickerProps {
   value: string;
@@ -14,15 +14,15 @@ const styles = {
     gridTemplateColumns: 'repeat(auto-fill, minmax(32px, 1fr))',
     gap: 1,
     p: 2,
-    border: '1px solid #dadce0',
+    border: `1px solid ${APP_COLORS.surface.border}`,
     borderRadius: 2,
-    bgcolor: '#f8f9fa',
+    bgcolor: APP_COLORS.surface.background,
   },
   swatch: {
     width: 32,
     height: 32,
     borderRadius: 1,
-    border: '1px solid #dadce0',
+    border: `1px solid ${APP_COLORS.surface.border}`,
     cursor: 'pointer',
     display: 'flex',
     alignItems: 'center',
@@ -45,18 +45,18 @@ const styles = {
   },
   blueCheckIcon: {
     fontSize: 18,
-    color: '#1a73e8',
+    color: APP_COLORS.brand.primary,
     fontWeight: 'bold',
   },
   symbolText: {
     fontSize: '16px',
-    color: '#5f6368',
+    color: APP_COLORS.text.secondary,
     lineHeight: 1,
   },
   label: {
     fontSize: '13px',
     fontWeight: 500,
-    color: '#202124',
+    color: APP_COLORS.text.primary,
     mb: 1.5,
   },
   caption: {
@@ -64,7 +64,7 @@ const styles = {
     mt: 1,
     ml: 0.5,
     fontSize: '12px',
-    color: '#5f6368',
+    color: APP_COLORS.text.secondary,
   },
 } as const;
 

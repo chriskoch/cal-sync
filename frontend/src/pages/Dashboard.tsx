@@ -3,14 +3,10 @@ import {
   Container,
   Box,
   Typography,
-  Button,
   Grid,
-  Card,
   CardContent,
   CardActions,
   Alert,
-  Chip,
-  IconButton,
   Menu,
   MenuItem,
   ListItemIcon,
@@ -39,7 +35,17 @@ import { oauthAPI, OAuthStatus, SyncConfig, syncAPI, calendarsAPI, CalendarItem 
 import SyncConfigForm from '../components/SyncConfigForm';
 import SyncHistoryDialog from '../components/SyncHistoryDialog';
 import ConfirmDialog from '../components/ConfirmDialog';
-import { CALENDAR_COLORS_MAP } from '../constants/colors';
+import { CALENDAR_COLORS_MAP, APP_COLORS } from '../constants/colors';
+import {
+  StyledIconButton,
+  PrimaryButton,
+  SecondaryButton,
+  OutlinedButton,
+  DangerButton,
+  InfoCard,
+  SmallChip,
+  TypographyLabel,
+} from '../components/common';
 
 export default function Dashboard() {
   const { user, logout } = useAuth();
@@ -291,13 +297,13 @@ export default function Dashboard() {
   return (
     <Box sx={{
       minHeight: '100vh',
-      bgcolor: '#f8f9fa',
+      bgcolor: APP_COLORS.surface.background,
     }}>
       {/* Header */}
       <Box
         component="header"
         sx={{
-          bgcolor: 'white',
+          bgcolor: APP_COLORS.surface.paper,
           borderBottom: '1px solid',
           borderColor: 'divider',
           px: 3,
@@ -311,7 +317,7 @@ export default function Dashboard() {
               sx={{
                 fontWeight: 400,
                 fontSize: '22px',
-                color: '#202124',
+                color: APP_COLORS.text.primary,
                 letterSpacing: '-0.2px',
               }}
             >
@@ -321,22 +327,18 @@ export default function Dashboard() {
               <Typography
                 variant="body2"
                 sx={{
-                  color: '#5f6368',
+                  color: APP_COLORS.text.secondary,
                   fontSize: '14px',
                 }}
               >
                 {user?.email}
               </Typography>
-              <IconButton
+              <StyledIconButton
                 onClick={handleUserMenuOpen}
                 size="small"
-                sx={{
-                  color: '#5f6368',
-                  '&:hover': { bgcolor: 'rgba(0, 0, 0, 0.04)' },
-                }}
               >
                 <AccountCircle />
-              </IconButton>
+              </StyledIconButton>
               <Menu
                 anchorEl={userMenuAnchor}
                 open={Boolean(userMenuAnchor)}
@@ -390,7 +392,7 @@ export default function Dashboard() {
         )}
 
         {loading ? (
-          <Typography sx={{ color: '#5f6368', py: 4, textAlign: 'center' }}>
+          <Typography sx={{ color: APP_COLORS.text.secondary, py: 4, textAlign: 'center' }}>
             Loading...
           </Typography>
         ) : (
@@ -402,7 +404,7 @@ export default function Dashboard() {
                 sx={{
                   fontSize: '24px',
                   fontWeight: 400,
-                  color: '#202124',
+                  color: APP_COLORS.text.primary,
                   mb: 2,
                   letterSpacing: '-0.3px',
                 }}
@@ -412,36 +414,19 @@ export default function Dashboard() {
               <Grid container spacing={2}>
                 {/* Business Calendar */}
                 <Grid item xs={12} md={6}>
-                  <Card
-                    elevation={0}
-                    sx={{
-                      border: '1px solid',
-                      borderColor: 'divider',
-                      borderRadius: 3,
-                      bgcolor: 'white',
-                      transition: 'all 0.2s ease',
-                      '&:hover': {
-                        boxShadow: '0 1px 3px 0 rgba(60,64,67,.3), 0 4px 8px 3px rgba(60,64,67,.15)',
-                      },
-                    }}
-                  >
+                  <InfoCard>
                     <CardContent sx={{ p: 3 }}>
-                      <Typography
-                        variant="subtitle1"
-                        sx={{
-                          fontSize: '16px',
-                          fontWeight: 500,
-                          color: '#202124',
-                          mb: 0.5,
-                        }}
+                      <TypographyLabel
+                        variant="subheading"
+                        sx={{ mb: 0.5 }}
                       >
                         Account 1
-                      </Typography>
+                      </TypographyLabel>
                       <Typography
                         variant="body2"
                         sx={{
                           fontSize: '14px',
-                          color: '#5f6368',
+                          color: APP_COLORS.text.secondary,
                           mb: 2.5,
                         }}
                       >
@@ -450,13 +435,13 @@ export default function Dashboard() {
 
                       {oauthStatus?.source_connected ? (
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                          <CheckCircle sx={{ fontSize: 20, color: '#1e8e3e' }} />
+                          <CheckCircle sx={{ fontSize: 20, color: APP_COLORS.status.success }} />
                           <Box>
                             <Typography
                               variant="body2"
                               sx={{
                                 fontSize: '14px',
-                                color: '#202124',
+                                color: APP_COLORS.text.primary,
                                 fontWeight: 500,
                               }}
                             >
@@ -466,7 +451,7 @@ export default function Dashboard() {
                               variant="body2"
                               sx={{
                                 fontSize: '13px',
-                                color: '#5f6368',
+                                color: APP_COLORS.text.secondary,
                               }}
                             >
                               {oauthStatus.source_email}
@@ -475,12 +460,12 @@ export default function Dashboard() {
                         </Box>
                       ) : (
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                          <Cancel sx={{ fontSize: 20, color: '#d93025' }} />
+                          <Cancel sx={{ fontSize: 20, color: APP_COLORS.status.error }} />
                           <Typography
                             variant="body2"
                             sx={{
                               fontSize: '14px',
-                              color: '#5f6368',
+                              color: APP_COLORS.text.secondary,
                             }}
                           >
                             Not connected
@@ -491,81 +476,38 @@ export default function Dashboard() {
                     <CardActions sx={{ px: 3, pb: 2.5, pt: 0 }}>
                       {oauthStatus?.source_connected ? (
                         <Tooltip title="Replace this account connection with a different Google account">
-                          <Button
-                            variant="outlined"
+                          <OutlinedButton
                             onClick={() => handleConnectAccount('source')}
-                            sx={{
-                              textTransform: 'none',
-                              fontSize: '14px',
-                              fontWeight: 500,
-                              borderRadius: 2,
-                              px: 3,
-                              borderColor: '#dadce0',
-                              color: '#1967d2',
-                              '&:hover': {
-                                borderColor: '#1967d2',
-                                bgcolor: 'rgba(26, 115, 232, 0.04)',
-                              },
-                            }}
                           >
                             Reconnect
-                          </Button>
+                          </OutlinedButton>
                         </Tooltip>
                       ) : (
-                        <Button
-                          variant="contained"
+                        <PrimaryButton
                           onClick={() => handleConnectAccount('source')}
-                          sx={{
-                            textTransform: 'none',
-                            fontSize: '14px',
-                            fontWeight: 500,
-                            borderRadius: 2,
-                            px: 3,
-                            bgcolor: '#1a73e8',
-                            '&:hover': {
-                              bgcolor: '#1765cc',
-                            },
-                          }}
                         >
                           Connect account
-                        </Button>
+                        </PrimaryButton>
                       )}
                     </CardActions>
-                  </Card>
+                  </InfoCard>
                 </Grid>
 
                 {/* Private Calendar */}
                 <Grid item xs={12} md={6}>
-                  <Card
-                    elevation={0}
-                    sx={{
-                      border: '1px solid',
-                      borderColor: 'divider',
-                      borderRadius: 3,
-                      bgcolor: 'white',
-                      transition: 'all 0.2s ease',
-                      '&:hover': {
-                        boxShadow: '0 1px 3px 0 rgba(60,64,67,.3), 0 4px 8px 3px rgba(60,64,67,.15)',
-                      },
-                    }}
-                  >
+                  <InfoCard>
                     <CardContent sx={{ p: 3 }}>
-                      <Typography
-                        variant="subtitle1"
-                        sx={{
-                          fontSize: '16px',
-                          fontWeight: 500,
-                          color: '#202124',
-                          mb: 0.5,
-                        }}
+                      <TypographyLabel
+                        variant="subheading"
+                        sx={{ mb: 0.5 }}
                       >
                         Account 2
-                      </Typography>
+                      </TypographyLabel>
                       <Typography
                         variant="body2"
                         sx={{
                           fontSize: '14px',
-                          color: '#5f6368',
+                          color: APP_COLORS.text.secondary,
                           mb: 2.5,
                         }}
                       >
@@ -574,13 +516,13 @@ export default function Dashboard() {
 
                       {oauthStatus?.destination_connected ? (
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                          <CheckCircle sx={{ fontSize: 20, color: '#1e8e3e' }} />
+                          <CheckCircle sx={{ fontSize: 20, color: APP_COLORS.status.success }} />
                           <Box>
                             <Typography
                               variant="body2"
                               sx={{
                                 fontSize: '14px',
-                                color: '#202124',
+                                color: APP_COLORS.text.primary,
                                 fontWeight: 500,
                               }}
                             >
@@ -590,7 +532,7 @@ export default function Dashboard() {
                               variant="body2"
                               sx={{
                                 fontSize: '13px',
-                                color: '#5f6368',
+                                color: APP_COLORS.text.secondary,
                               }}
                             >
                               {oauthStatus.destination_email}
@@ -599,12 +541,12 @@ export default function Dashboard() {
                         </Box>
                       ) : (
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                          <Cancel sx={{ fontSize: 20, color: '#d93025' }} />
+                          <Cancel sx={{ fontSize: 20, color: APP_COLORS.status.error }} />
                           <Typography
                             variant="body2"
                             sx={{
                               fontSize: '14px',
-                              color: '#5f6368',
+                              color: APP_COLORS.text.secondary,
                             }}
                           >
                             Not connected
@@ -615,47 +557,21 @@ export default function Dashboard() {
                     <CardActions sx={{ px: 3, pb: 2.5, pt: 0 }}>
                       {oauthStatus?.destination_connected ? (
                         <Tooltip title="Replace this account connection with a different Google account">
-                          <Button
-                            variant="outlined"
+                          <OutlinedButton
                             onClick={() => handleConnectAccount('destination')}
-                            sx={{
-                              textTransform: 'none',
-                              fontSize: '14px',
-                              fontWeight: 500,
-                              borderRadius: 2,
-                              px: 3,
-                              borderColor: '#dadce0',
-                              color: '#1967d2',
-                              '&:hover': {
-                                borderColor: '#1967d2',
-                                bgcolor: 'rgba(26, 115, 232, 0.04)',
-                              },
-                            }}
                           >
                             Reconnect
-                          </Button>
+                          </OutlinedButton>
                         </Tooltip>
                       ) : (
-                        <Button
-                          variant="contained"
+                        <PrimaryButton
                           onClick={() => handleConnectAccount('destination')}
-                          sx={{
-                            textTransform: 'none',
-                            fontSize: '14px',
-                            fontWeight: 500,
-                            borderRadius: 2,
-                            px: 3,
-                            bgcolor: '#1a73e8',
-                            '&:hover': {
-                              bgcolor: '#1765cc',
-                            },
-                          }}
                         >
                           Connect account
-                        </Button>
+                        </PrimaryButton>
                       )}
                     </CardActions>
-                  </Card>
+                  </InfoCard>
                 </Grid>
               </Grid>
             </Box>
@@ -669,7 +585,7 @@ export default function Dashboard() {
                     sx={{
                       fontSize: '24px',
                       fontWeight: 400,
-                      color: '#202124',
+                      color: APP_COLORS.text.primary,
                       letterSpacing: '-0.3px',
                     }}
                   >
@@ -683,16 +599,12 @@ export default function Dashboard() {
                         }}
                       />
                     )}
-                    <IconButton
+                    <StyledIconButton
                       size="small"
                       onClick={fetchSyncConfigs}
-                      sx={{
-                        color: '#5f6368',
-                        '&:hover': { bgcolor: 'rgba(0, 0, 0, 0.04)' },
-                      }}
                     >
                       <Refresh fontSize="small" />
-                    </IconButton>
+                    </StyledIconButton>
                   </Box>
                 </Box>
 
@@ -705,45 +617,33 @@ export default function Dashboard() {
                     if (!forwardConfig) return null;
 
                     return (
-                      <Card
+                      <InfoCard
                         key={pairId}
-                        elevation={0}
                         sx={{
-                          border: '1px solid',
-                          borderColor: '#1a73e8',
-                          borderRadius: 3,
-                          bgcolor: 'white',
-                          overflow: 'visible',
+                          borderColor: APP_COLORS.brand.primary,
                         }}
                       >
                         <CardContent sx={{ p: 3 }}>
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2.5 }}>
-                            <SwapHoriz sx={{ fontSize: 20, color: '#1a73e8' }} />
-                            <Typography
-                              variant="subtitle1"
-                              sx={{
-                                fontSize: '16px',
-                                fontWeight: 500,
-                                color: '#202124',
-                              }}
-                            >
+                            <SwapHoriz sx={{ fontSize: 20, color: APP_COLORS.brand.primary }} />
+                            <TypographyLabel variant="subheading">
                               Bi-directional sync
-                            </Typography>
+                            </TypographyLabel>
                           </Box>
 
                           {/* Forward direction */}
-                          <Box sx={{ mb: 2, pb: 2, borderBottom: '1px solid #f1f3f4' }}>
+                          <Box sx={{ mb: 2, pb: 2, borderBottom: `1px solid ${APP_COLORS.surface.borderLight}` }}>
                             <Typography
                               variant="body2"
                               sx={{
                                 fontSize: '14px',
-                                color: '#202124',
+                                color: APP_COLORS.text.primary,
                                 mb: 1,
                                 fontWeight: 500,
                               }}
                             >
                               {getCalendarDisplayName(forwardConfig.source_calendar_id)}
-                              <Box component="span" sx={{ mx: 1, color: '#5f6368' }}>→</Box>
+                              <Box component="span" sx={{ mx: 1, color: APP_COLORS.text.secondary }}>→</Box>
                               {getCalendarDisplayName(forwardConfig.dest_calendar_id)}
                             </Typography>
                             <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
@@ -751,7 +651,8 @@ export default function Dashboard() {
                                 // If destination color is set, show it
                                 if (forwardConfig.destination_color_id && CALENDAR_COLORS_MAP[forwardConfig.destination_color_id]) {
                                   return (
-                                    <Chip
+                                    <SmallChip
+                                      variant="outlined"
                                       icon={
                                         <Circle
                                           sx={{
@@ -761,14 +662,6 @@ export default function Dashboard() {
                                         />
                                       }
                                       label={CALENDAR_COLORS_MAP[forwardConfig.destination_color_id].name}
-                                      size="small"
-                                      sx={{
-                                        height: 24,
-                                        fontSize: '12px',
-                                        bgcolor: 'transparent',
-                                        border: '1px solid #dadce0',
-                                        color: '#5f6368',
-                                      }}
                                     />
                                   );
                                 }
@@ -779,7 +672,8 @@ export default function Dashboard() {
                                   // Calendar colors 12-24 aren't valid event colors, map to Lavender (1)
                                   const eventColorId = CALENDAR_COLORS_MAP[sourceColorId] ? sourceColorId : '1';
                                   return (
-                                    <Chip
+                                    <SmallChip
+                                      variant="outlined"
                                       icon={
                                         <Circle
                                           sx={{
@@ -789,48 +683,26 @@ export default function Dashboard() {
                                         />
                                       }
                                       label={`${CALENDAR_COLORS_MAP[eventColorId].name} (source)`}
-                                      size="small"
-                                      sx={{
-                                        height: 24,
-                                        fontSize: '12px',
-                                        bgcolor: 'transparent',
-                                        border: '1px solid #dadce0',
-                                        color: '#5f6368',
-                                        fontStyle: 'italic',
-                                      }}
+                                      sx={{ fontStyle: 'italic' }}
                                     />
                                   );
                                 }
 
                                 // Fallback to generic "Same as source"
                                 return (
-                                  <Chip
+                                  <SmallChip
+                                    variant="outlined"
                                     icon={<SwapHoriz sx={{ fontSize: 14 }} />}
                                     label="Same as source"
-                                    size="small"
-                                    sx={{
-                                      height: 24,
-                                      fontSize: '12px',
-                                      bgcolor: 'transparent',
-                                      border: '1px solid #dadce0',
-                                      color: '#5f6368',
-                                      fontStyle: 'italic',
-                                    }}
+                                    sx={{ fontStyle: 'italic' }}
                                   />
                                 );
                               })()}
                               {forwardConfig.privacy_mode_enabled && (
-                                <Chip
+                                <SmallChip
+                                  variant="outlined"
                                   icon={<Lock sx={{ fontSize: 14 }} />}
                                   label={`Privacy: "${forwardConfig.privacy_placeholder_text || 'Personal appointment'}"`}
-                                  size="small"
-                                  sx={{
-                                    height: 24,
-                                    fontSize: '12px',
-                                    bgcolor: 'transparent',
-                                    border: '1px solid #dadce0',
-                                    color: '#5f6368',
-                                  }}
                                 />
                               )}
                             </Box>
@@ -843,13 +715,13 @@ export default function Dashboard() {
                                 variant="body2"
                                 sx={{
                                   fontSize: '14px',
-                                  color: '#202124',
+                                  color: APP_COLORS.text.primary,
                                   mb: 1,
                                   fontWeight: 500,
                                 }}
                               >
                                 {getCalendarDisplayName(reverseConfig.source_calendar_id)}
-                                <Box component="span" sx={{ mx: 1, color: '#5f6368' }}>→</Box>
+                                <Box component="span" sx={{ mx: 1, color: APP_COLORS.text.secondary }}>→</Box>
                                 {getCalendarDisplayName(reverseConfig.dest_calendar_id)}
                               </Typography>
                               <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
@@ -857,7 +729,8 @@ export default function Dashboard() {
                                   // If destination color is set, show it
                                   if (reverseConfig.destination_color_id && CALENDAR_COLORS_MAP[reverseConfig.destination_color_id]) {
                                     return (
-                                      <Chip
+                                      <SmallChip
+                                        variant="outlined"
                                         icon={
                                           <Circle
                                             sx={{
@@ -867,14 +740,6 @@ export default function Dashboard() {
                                           />
                                         }
                                         label={CALENDAR_COLORS_MAP[reverseConfig.destination_color_id].name}
-                                        size="small"
-                                        sx={{
-                                          height: 24,
-                                          fontSize: '12px',
-                                          bgcolor: 'transparent',
-                                          border: '1px solid #dadce0',
-                                          color: '#5f6368',
-                                        }}
                                       />
                                     );
                                   }
@@ -885,7 +750,8 @@ export default function Dashboard() {
                                     // Calendar colors 12-24 aren't valid event colors, map to Lavender (1)
                                     const eventColorId = CALENDAR_COLORS_MAP[sourceColorId] ? sourceColorId : '1';
                                     return (
-                                      <Chip
+                                      <SmallChip
+                                        variant="outlined"
                                         icon={
                                           <Circle
                                             sx={{
@@ -895,48 +761,26 @@ export default function Dashboard() {
                                           />
                                         }
                                         label={`${CALENDAR_COLORS_MAP[eventColorId].name} (source)`}
-                                        size="small"
-                                        sx={{
-                                          height: 24,
-                                          fontSize: '12px',
-                                          bgcolor: 'transparent',
-                                          border: '1px solid #dadce0',
-                                          color: '#5f6368',
-                                          fontStyle: 'italic',
-                                        }}
+                                        sx={{ fontStyle: 'italic' }}
                                       />
                                     );
                                   }
 
                                   // Fallback to generic "Same as source"
                                   return (
-                                    <Chip
+                                    <SmallChip
+                                      variant="outlined"
                                       icon={<SwapHoriz sx={{ fontSize: 14 }} />}
                                       label="Same as source"
-                                      size="small"
-                                      sx={{
-                                        height: 24,
-                                        fontSize: '12px',
-                                        bgcolor: 'transparent',
-                                        border: '1px solid #dadce0',
-                                        color: '#5f6368',
-                                        fontStyle: 'italic',
-                                      }}
+                                      sx={{ fontStyle: 'italic' }}
                                     />
                                   );
                                 })()}
                                 {reverseConfig.privacy_mode_enabled && (
-                                  <Chip
+                                  <SmallChip
+                                    variant="outlined"
                                     icon={<Lock sx={{ fontSize: 14 }} />}
                                     label={`Privacy: "${reverseConfig.privacy_placeholder_text || 'Personal appointment'}"`}
-                                    size="small"
-                                    sx={{
-                                      height: 24,
-                                      fontSize: '12px',
-                                      bgcolor: 'transparent',
-                                      border: '1px solid #dadce0',
-                                      color: '#5f6368',
-                                    }}
                                   />
                                 )}
                               </Box>
@@ -944,12 +788,12 @@ export default function Dashboard() {
                           )}
 
                           {/* General settings */}
-                          <Box sx={{ mt: 2.5, pt: 2, borderTop: '1px solid #f1f3f4' }}>
+                          <Box sx={{ mt: 2.5, pt: 2, borderTop: `1px solid ${APP_COLORS.surface.borderLight}` }}>
                             <Typography
                               variant="body2"
                               sx={{
                                 fontSize: '14px',
-                                color: '#202124',
+                                color: APP_COLORS.text.primary,
                                 mb: 1,
                                 fontWeight: 500,
                               }}
@@ -957,35 +801,21 @@ export default function Dashboard() {
                               Settings
                             </Typography>
                             <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
-                              <Chip
+                              <SmallChip
+                                variant="outlined"
                                 icon={<DateRange sx={{ fontSize: 14 }} />}
                                 label={`${forwardConfig.sync_lookahead_days} days`}
-                                size="small"
-                                sx={{
-                                  height: 24,
-                                  fontSize: '12px',
-                                  bgcolor: 'transparent',
-                                  border: '1px solid #dadce0',
-                                  color: '#5f6368',
-                                }}
                               />
                               {forwardConfig.last_synced_at && (
-                                <Typography variant="caption" sx={{ color: '#5f6368', fontSize: '13px' }}>
+                                <Typography variant="caption" sx={{ color: APP_COLORS.text.secondary, fontSize: '13px' }}>
                                   Last synced {new Date(forwardConfig.last_synced_at).toLocaleDateString()}
                                 </Typography>
                               )}
                               {forwardConfig.auto_sync_enabled && (
-                                <Chip
+                                <SmallChip
+                                  variant="outlined"
                                   icon={<Schedule sx={{ fontSize: 14 }} />}
                                   label={`Auto: ${forwardConfig.auto_sync_cron} (${forwardConfig.auto_sync_timezone})`}
-                                  size="small"
-                                  sx={{
-                                    height: 24,
-                                    fontSize: '12px',
-                                    bgcolor: 'transparent',
-                                    border: '1px solid #dadce0',
-                                    color: '#5f6368',
-                                  }}
                                 />
                               )}
                             </Box>
@@ -994,87 +824,43 @@ export default function Dashboard() {
 
                         <CardActions sx={{ px: 3, pb: 2.5, pt: 0, justifyContent: 'space-between', flexWrap: 'wrap', gap: 1 }}>
                           <Box sx={{ display: 'flex', gap: 1 }}>
-                            <Button
-                              variant="contained"
+                            <PrimaryButton
                               size="small"
                               startIcon={<PlayArrow />}
                               onClick={() => handleTriggerSync(forwardConfig.id, true)}
                               disabled={syncingConfigId === forwardConfig.id}
-                              sx={{
-                                textTransform: 'none',
-                                fontSize: '14px',
-                                fontWeight: 500,
-                                borderRadius: 2,
-                                bgcolor: '#1a73e8',
-                                '&:hover': { bgcolor: '#1765cc' },
-                                '&:disabled': { bgcolor: '#dadce0' },
-                              }}
                             >
                               {syncingConfigId === forwardConfig.id ? 'Syncing...' : 'Sync'}
-                            </Button>
-                            <Button
-                              variant="text"
+                            </PrimaryButton>
+                            <SecondaryButton
                               size="small"
                               startIcon={<History />}
                               onClick={() => handleViewHistory(forwardConfig.id)}
-                              sx={{
-                                textTransform: 'none',
-                                fontSize: '14px',
-                                fontWeight: 500,
-                                borderRadius: 2,
-                                color: '#5f6368',
-                                '&:hover': { bgcolor: 'rgba(0, 0, 0, 0.04)' },
-                              }}
                             >
                               History
-                            </Button>
+                            </SecondaryButton>
                           </Box>
-                          <Button
-                            variant="text"
+                          <DangerButton
                             size="small"
                             startIcon={<Delete />}
                             onClick={() => handleDeleteBidirectionalPair(forwardConfig.id, reverseConfig?.id || '')}
-                            sx={{
-                              textTransform: 'none',
-                              fontSize: '14px',
-                              fontWeight: 500,
-                              borderRadius: 2,
-                              color: '#d93025',
-                              '&:hover': { bgcolor: 'rgba(217, 48, 37, 0.04)' },
-                            }}
                           >
                             Delete
-                          </Button>
+                          </DangerButton>
                         </CardActions>
-                      </Card>
+                      </InfoCard>
                     );
                   })}
 
                   {/* One-way configs */}
                   {groupedConfigs.oneWay.map((config) => (
-                    <Card
-                      key={config.id}
-                      elevation={0}
-                      sx={{
-                        border: '1px solid',
-                        borderColor: 'divider',
-                        borderRadius: 3,
-                        bgcolor: 'white',
-                      }}
-                    >
+                    <InfoCard key={config.id}>
                       <CardContent sx={{ p: 3 }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2.5 }}>
-                          <ArrowForward sx={{ fontSize: 20, color: '#5f6368' }} />
-                          <Typography
-                            variant="subtitle1"
-                            sx={{
-                              fontSize: '16px',
-                              fontWeight: 500,
-                              color: '#202124',
-                            }}
-                          >
+                          <ArrowForward sx={{ fontSize: 20, color: APP_COLORS.text.secondary }} />
+                          <TypographyLabel variant="subheading">
                             One-way sync
-                          </Typography>
+                          </TypographyLabel>
                         </Box>
 
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', mb: 2 }}>
@@ -1082,24 +868,17 @@ export default function Dashboard() {
                             variant="body2"
                             sx={{
                               fontSize: '14px',
-                              color: '#202124',
+                              color: APP_COLORS.text.primary,
                               fontWeight: 500,
                             }}
                           >
                             {getCalendarDisplayName(config.source_calendar_id)}
-                            <Box component="span" sx={{ mx: 1, color: '#5f6368' }}>→</Box>
+                            <Box component="span" sx={{ mx: 1, color: APP_COLORS.text.secondary }}>→</Box>
                             {getCalendarDisplayName(config.dest_calendar_id)}
                           </Typography>
-                          <Chip
+                          <SmallChip
                             label={config.is_active ? 'Active' : 'Inactive'}
-                            size="small"
-                            sx={{
-                              height: 24,
-                              fontSize: '12px',
-                              bgcolor: config.is_active ? '#e6f4ea' : '#f1f3f4',
-                              color: config.is_active ? '#1e8e3e' : '#5f6368',
-                              border: 'none',
-                            }}
+                            variant={config.is_active ? 'status-success' : 'status-inactive'}
                           />
                         </Box>
 
@@ -1108,7 +887,8 @@ export default function Dashboard() {
                             // If destination color is set, show it
                             if (config.destination_color_id && CALENDAR_COLORS_MAP[config.destination_color_id]) {
                               return (
-                                <Chip
+                                <SmallChip
+                                  variant="outlined"
                                   icon={
                                     <Circle
                                       sx={{
@@ -1118,14 +898,6 @@ export default function Dashboard() {
                                     />
                                   }
                                   label={CALENDAR_COLORS_MAP[config.destination_color_id].name}
-                                  size="small"
-                                  sx={{
-                                    height: 24,
-                                    fontSize: '12px',
-                                    bgcolor: 'transparent',
-                                    border: '1px solid #dadce0',
-                                    color: '#5f6368',
-                                  }}
                                 />
                               );
                             }
@@ -1136,7 +908,8 @@ export default function Dashboard() {
                               // Calendar colors 12-24 aren't valid event colors, map to Lavender (1)
                               const eventColorId = CALENDAR_COLORS_MAP[sourceColorId] ? sourceColorId : '1';
                               return (
-                                <Chip
+                                <SmallChip
+                                  variant="outlined"
                                   icon={
                                     <Circle
                                       sx={{
@@ -1146,82 +919,46 @@ export default function Dashboard() {
                                     />
                                   }
                                   label={`${CALENDAR_COLORS_MAP[eventColorId].name} (source)`}
-                                  size="small"
-                                  sx={{
-                                    height: 24,
-                                    fontSize: '12px',
-                                    bgcolor: 'transparent',
-                                    border: '1px solid #dadce0',
-                                    color: '#5f6368',
-                                    fontStyle: 'italic',
-                                  }}
+                                  sx={{ fontStyle: 'italic' }}
                                 />
                               );
                             }
 
                             // Fallback to generic "Same as source"
                             return (
-                              <Chip
+                              <SmallChip
+                                variant="outlined"
                                 icon={<SwapHoriz sx={{ fontSize: 14 }} />}
                                 label="Same as source"
-                                size="small"
-                                sx={{
-                                  height: 24,
-                                  fontSize: '12px',
-                                  bgcolor: 'transparent',
-                                  border: '1px solid #dadce0',
-                                  color: '#5f6368',
-                                  fontStyle: 'italic',
-                                }}
+                                sx={{ fontStyle: 'italic' }}
                               />
                             );
                           })()}
                           {config.privacy_mode_enabled && (
-                            <Chip
+                            <SmallChip
+                              variant="outlined"
                               icon={<Lock sx={{ fontSize: 14 }} />}
                               label={`Privacy: "${config.privacy_placeholder_text || 'Personal appointment'}"`}
-                              size="small"
-                              sx={{
-                                height: 24,
-                                fontSize: '12px',
-                                bgcolor: 'transparent',
-                                border: '1px solid #dadce0',
-                                color: '#5f6368',
-                              }}
                             />
                           )}
                         </Box>
 
                         <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
-                          <Chip
+                          <SmallChip
+                            variant="outlined"
                             icon={<DateRange sx={{ fontSize: 14 }} />}
                             label={`${config.sync_lookahead_days} days`}
-                            size="small"
-                            sx={{
-                              height: 24,
-                              fontSize: '12px',
-                              bgcolor: 'transparent',
-                              border: '1px solid #dadce0',
-                              color: '#5f6368',
-                            }}
                           />
                           {config.last_synced_at && (
-                            <Typography variant="caption" sx={{ color: '#5f6368', fontSize: '13px' }}>
+                            <Typography variant="caption" sx={{ color: APP_COLORS.text.secondary, fontSize: '13px' }}>
                               Last synced {new Date(config.last_synced_at).toLocaleDateString()}
                             </Typography>
                           )}
                           {config.auto_sync_enabled && (
-                            <Chip
+                            <SmallChip
+                              variant="outlined"
                               icon={<Schedule sx={{ fontSize: 14 }} />}
                               label={`Auto: ${config.auto_sync_cron} (${config.auto_sync_timezone})`}
-                              size="small"
-                              sx={{
-                                height: 24,
-                                fontSize: '12px',
-                                bgcolor: 'transparent',
-                                border: '1px solid #dadce0',
-                                color: '#5f6368',
-                              }}
                             />
                           )}
                         </Box>
@@ -1229,59 +966,31 @@ export default function Dashboard() {
 
                       <CardActions sx={{ px: 3, pb: 2.5, pt: 0, justifyContent: 'space-between', flexWrap: 'wrap', gap: 1 }}>
                         <Box sx={{ display: 'flex', gap: 1 }}>
-                          <Button
-                            variant="contained"
+                          <PrimaryButton
                             size="small"
                             startIcon={<PlayArrow />}
                             onClick={() => handleTriggerSync(config.id)}
                             disabled={syncingConfigId === config.id}
-                            sx={{
-                              textTransform: 'none',
-                              fontSize: '14px',
-                              fontWeight: 500,
-                              borderRadius: 2,
-                              bgcolor: '#1a73e8',
-                              '&:hover': { bgcolor: '#1765cc' },
-                              '&:disabled': { bgcolor: '#dadce0' },
-                            }}
                           >
                             {syncingConfigId === config.id ? 'Syncing...' : 'Sync'}
-                          </Button>
-                          <Button
-                            variant="text"
+                          </PrimaryButton>
+                          <SecondaryButton
                             size="small"
                             startIcon={<History />}
                             onClick={() => handleViewHistory(config.id)}
-                            sx={{
-                              textTransform: 'none',
-                              fontSize: '14px',
-                              fontWeight: 500,
-                              borderRadius: 2,
-                              color: '#5f6368',
-                              '&:hover': { bgcolor: 'rgba(0, 0, 0, 0.04)' },
-                            }}
                           >
                             History
-                          </Button>
+                          </SecondaryButton>
                         </Box>
-                        <Button
-                          variant="text"
+                        <DangerButton
                           size="small"
                           startIcon={<Delete />}
                           onClick={() => handleDeleteConfig(config.id)}
-                          sx={{
-                            textTransform: 'none',
-                            fontSize: '14px',
-                            fontWeight: 500,
-                            borderRadius: 2,
-                            color: '#d93025',
-                            '&:hover': { bgcolor: 'rgba(217, 48, 37, 0.04)' },
-                          }}
                         >
                           Delete
-                        </Button>
+                        </DangerButton>
                       </CardActions>
-                    </Card>
+                    </InfoCard>
                   ))}
                 </Stack>
               </Box>
@@ -1294,7 +1003,7 @@ export default function Dashboard() {
                   textAlign: 'center',
                   py: 8,
                   px: 3,
-                  bgcolor: 'white',
+                  bgcolor: APP_COLORS.surface.paper,
                   border: '1px solid',
                   borderColor: 'divider',
                   borderRadius: 3,
@@ -1305,7 +1014,7 @@ export default function Dashboard() {
                   sx={{
                     fontSize: '18px',
                     fontWeight: 400,
-                    color: '#202124',
+                    color: APP_COLORS.text.primary,
                     mb: 1,
                   }}
                 >
@@ -1315,7 +1024,7 @@ export default function Dashboard() {
                   variant="body2"
                   sx={{
                     fontSize: '14px',
-                    color: '#5f6368',
+                    color: APP_COLORS.text.secondary,
                     mb: 3,
                   }}
                 >
