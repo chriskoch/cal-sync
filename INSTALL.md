@@ -1,258 +1,398 @@
 # Installation Guide
 
-Simple guide to get Calendar Sync running in 15 minutes.
+Get Calendar Sync running in 15 minutes.
 
-## Prerequisites
+## Quick Start
 
-- Docker and Docker Compose installed
-- A Google account
-- (Optional) A custom domain with HTTPS if deploying to production
-
-## Step 1: Google OAuth Setup
-
-### 1.1 Create a Google Cloud Project
-
-1. Go to [Google Cloud Console](https://console.cloud.google.com/)
-2. Click **"Select a project"** → **"New Project"**
-3. Enter project name: `Calendar Sync`
-4. Click **"Create"**
-
-### 1.2 Enable Google Calendar API
-
-1. In your new project, go to **"APIs & Services"** → **"Library"**
-2. Search for **"Google Calendar API"**
-3. Click on it and press **"Enable"**
-
-### 1.3 Configure OAuth Consent Screen
-
-1. Go to **"APIs & Services"** → **"OAuth consent screen"**
-2. Select **"External"** user type
-3. Click **"Create"**
-4. Fill in required fields:
-   - **App name:** `Calendar Sync`
-   - **User support email:** Your email
-   - **Developer contact email:** Your email
-5. Click **"Save and Continue"**
-6. On **"Scopes"** page:
-   - Click **"Add or Remove Scopes"**
-   - Search for: `https://www.googleapis.com/auth/calendar`
-   - Check the box next to **"Google Calendar API"**
-   - Click **"Update"**
-   - Click **"Save and Continue"**
-7. On **"Test users"** page:
-   - Click **"Add Users"**
-   - Add your Google email addresses (the ones you'll sync calendars for)
-   - Click **"Save and Continue"**
-8. Review and click **"Back to Dashboard"**
-
-### 1.4 Create OAuth Credentials
-
-1. Go to **"APIs & Services"** → **"Credentials"**
-2. Click **"Create Credentials"** → **"OAuth client ID"**
-3. Select **"Web application"**
-4. Enter name: `Calendar Sync Web Client`
-5. Under **"Authorized redirect URIs"**, click **"Add URI"** and add:
-   - For local testing: `http://localhost:8033/api/oauth/callback`
-   - For production: `https://your-domain.com/api/oauth/callback`
-6. Click **"Create"**
-7. **Important:** Copy your **Client ID** and **Client Secret** - you'll need these next!
-
-## Step 2: Install Calendar Sync
-
-### 2.1 Clone Repository
-
-```bash
-git clone https://github.com/yourusername/cal-sync.git
-cd cal-sync
-```
-
-### 2.2 Create Configuration File
-
-Copy the example configuration:
-
-```bash
-cp .env.example .env.local
-```
-
-Edit `.env.local` with your favorite text editor:
-
-```bash
-nano .env.local
-```
-
-### 2.3 Add Your Credentials
-
-Paste your Google OAuth credentials from Step 1.4:
-
-```bash
-# Google OAuth Credentials (from Step 1.4)
-OAUTH_CLIENT_ID=your-client-id-here.apps.googleusercontent.com
-OAUTH_CLIENT_SECRET=your-client-secret-here
-
-# Generate secure secrets (run these commands in terminal)
-# Linux/Mac: openssl rand -base64 32
-# Windows: use an online base64 generator
-JWT_SECRET=paste-your-random-jwt-secret-here
-ENCRYPTION_KEY=paste-your-random-encryption-key-here
-
-# Database password (choose a strong password)
-POSTGRES_PASSWORD=your-secure-database-password
-
-# Production settings (optional - for HTTPS deployment)
-# ENVIRONMENT=production
-# DEBUG=false
-# API_URL=https://your-domain.com
-# FRONTEND_URL=https://your-domain.com
-```
-
-**To generate secure secrets:**
-
-```bash
-# Run these commands twice to get two different secrets
-openssl rand -base64 32
-```
-
-Copy the output for `JWT_SECRET` and `ENCRYPTION_KEY`.
-
-Save the file (Ctrl+X, then Y, then Enter in nano).
-
-## Step 3: Deploy
-
-### Option A: Local Testing (localhost)
-
-```bash
-# Build the Docker image
-docker build -t cal-sync:latest .
-
-# Start the application
-docker compose up -d
-
-# Check logs to ensure it started successfully
-docker compose logs -f app
-```
-
-Access the app at: **http://localhost:8033**
-
-### Option B: Production (with HTTPS domain)
-
-If you're using nginx proxy manager or another reverse proxy:
-
-1. Update `.env.local` with your domain:
-   ```bash
-   API_URL=https://cal-sync.yourdomain.com
-   FRONTEND_URL=https://cal-sync.yourdomain.com
-   ENVIRONMENT=production
-   DEBUG=false
-   ```
-
-2. Deploy:
-   ```bash
-   docker build -t cal-sync:latest .
-   docker compose up -d
-   ```
-
-3. Configure your reverse proxy (nginx proxy manager):
-   - **Domain:** `cal-sync.yourdomain.com`
-   - **Forward to:** `localhost:8033`
-   - **Enable SSL:** Yes (Let's Encrypt)
-   - **Enable WebSockets:** Yes
-
-## Step 4: First Use
-
-1. Open your Calendar Sync URL in a browser
-2. Click **"Sign in with Google"**
-3. Authorize with your Google account (the one you added as test user)
-4. Your account is automatically connected as the **source calendar**
-5. Click **"Connect Destination Account"** to add a second Google account
-6. Create your first sync configuration:
-   - Select source calendar
-   - Select destination calendar
-   - Choose event color
-   - Enable auto-sync (optional)
-7. Click **"Run Sync Now"** to test
-
-## Troubleshooting
-
-### "Error 400: redirect_uri_mismatch"
-
-**Problem:** OAuth redirect URI doesn't match Google Cloud Console settings.
-
-**Solution:**
-1. Check your `.env.local` file - what is your `API_URL`?
-2. Go to [Google Cloud Console Credentials](https://console.cloud.google.com/apis/credentials)
-3. Edit your OAuth client
-4. Ensure redirect URI matches: `{API_URL}/api/oauth/callback`
-   - Example: `http://localhost:8033/api/oauth/callback`
-   - Or: `https://cal-sync.yourdomain.com/api/oauth/callback`
-
-### "Access blocked: This app's request is invalid"
-
-**Problem:** Redirect URI is missing from Google OAuth client.
-
-**Solution:**
-1. Go to [Google Cloud Console Credentials](https://console.cloud.google.com/apis/credentials)
-2. Edit your OAuth client
-3. Add the redirect URI: `http://localhost:8033/api/oauth/callback`
-
-### Container won't start
-
-**Check logs:**
-```bash
-docker compose logs app
-```
-
-**Common issues:**
-- Missing environment variables in `.env.local`
-- Invalid `ENCRYPTION_KEY` format (must be base64, 32 bytes)
-- Database connection failed (check `POSTGRES_PASSWORD`)
-
-**Restart services:**
-```bash
-docker compose down
-docker compose up -d
-```
-
-### Database errors
-
-**Reset database:**
-```bash
-docker compose down -v  # WARNING: This deletes all data!
-docker compose up -d
-```
-
-## Update Calendar Sync
-
-```bash
-# Pull latest code
-git pull origin main
-
-# Rebuild Docker image
-docker build -t cal-sync:latest .
-
-# Restart containers
-docker compose down
-docker compose up -d
-```
-
-## Need Help?
-
-- Check the [README.md](README.md) for detailed documentation
-- Review [DEVELOPMENT.md](DEVELOPMENT.md) for development setup
-- Open an issue on GitHub
-
-## Security Checklist
-
-Before going to production:
-
-- [ ] Generated strong random secrets for `JWT_SECRET` and `ENCRYPTION_KEY`
-- [ ] Set a strong `POSTGRES_PASSWORD`
-- [ ] Set `ENVIRONMENT=production` and `DEBUG=false` in `.env.local`
-- [ ] Using HTTPS (not HTTP) in production
-- [ ] OAuth redirect URI uses HTTPS
-- [ ] `.env.local` is NOT committed to git (it's in `.gitignore`)
-- [ ] Firewall configured (only ports 80, 443 exposed publicly)
-- [ ] Regular database backups configured
+1. **[Configure Google OAuth](#step-1-google-oauth-setup)** (5 min)
+2. **[Deploy with Docker](#step-2-deploy-with-docker)** (5 min)
+3. **[Configure reverse proxy](#step-3-configure-reverse-proxy)** (optional - for production)
+4. **[Start syncing](#step-4-first-use)** (5 min)
 
 ---
 
-**That's it!** Your Calendar Sync should now be running. Happy syncing! 🎉
+## Step 1: Google OAuth Setup
+
+### 1.1 Create Google Cloud Project
+
+1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+2. Create a new project or select existing
+3. Navigate to **"APIs & Services"** → **"Library"**
+4. Enable **"Google Calendar API"**
+
+### 1.2 Configure OAuth Consent Screen
+
+1. Go to **"APIs & Services"** → **"OAuth consent screen"**
+2. Select **"External"** user type → **"Create"**
+3. Fill in app information:
+   - **App name**: `Calendar Sync`
+   - **User support email**: Your email
+   - **Developer contact email**: Your email
+4. Click **"Save and Continue"**
+
+5. **Add Scopes**:
+   - Click **"Add or Remove Scopes"**
+   - Search for and select: `https://www.googleapis.com/auth/calendar`
+   - Click **"Update"** → **"Save and Continue"**
+
+6. **Add Test Users** (IMPORTANT):
+   - Click **"Add Users"**
+   - **Add ALL email addresses** you'll use for syncing calendars
+   - Click **"Save and Continue"**
+   - Click **"Back to Dashboard"**
+
+> **⚠️ Common Issue**: If you skip adding test users, you'll get "Error 403: access_denied" when signing in.
+
+### 1.3 Create OAuth Credentials
+
+1. Go to **"APIs & Services"** → **"Credentials"**
+2. Click **"Create Credentials"** → **"OAuth client ID"**
+3. Application type: **"Web application"**
+4. Name: `Calendar Sync`
+5. **Authorized redirect URIs** - Add:
+   - Local: `http://localhost:8033/api/oauth/callback`
+   - Production: `https://yourdomain.com/api/oauth/callback`
+6. Click **"Create"**
+7. **Copy Client ID and Client Secret** (you'll need these next)
+
+---
+
+## Step 2: Deploy with Docker
+
+### 2.1 Create Environment File
+
+```bash
+# Create .env.local file
+cat > .env.local << 'EOF'
+# Docker Image
+DOCKER_IMAGE=ghcr.io/chriskoch/cal-sync:latest
+
+# Database
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=CHANGE_ME
+POSTGRES_DB=calsync
+
+# Google OAuth (from Step 1.3)
+OAUTH_CLIENT_ID=your-client-id.apps.googleusercontent.com
+OAUTH_CLIENT_SECRET=your-client-secret
+
+# Security Keys (generate below)
+JWT_SECRET=GENERATE_ME
+ENCRYPTION_KEY=GENERATE_ME
+
+# Optional
+SYNC_LOOKAHEAD_DAYS=90
+EOF
+```
+
+### 2.2 Generate Security Keys
+
+```bash
+# Generate JWT secret
+openssl rand -base64 32
+
+# Generate encryption key
+openssl rand -base64 32
+
+# Generate database password
+openssl rand -base64 24
+```
+
+Copy each output and paste into `.env.local`.
+
+### 2.3 Create docker-compose.yml
+
+```bash
+cat > docker-compose.yml << 'EOF'
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15
+    platform: linux/amd64
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-calsync}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  app:
+    image: ${DOCKER_IMAGE:-ghcr.io/chriskoch/cal-sync:latest}
+    env_file:
+      - .env.local
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-calsync}
+      ENVIRONMENT: production
+      DEBUG: "false"
+      API_URL: ${API_URL:-http://localhost:8033}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:8033}
+    ports:
+      - "${EXTERNAL_PORT:-8033}:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+EOF
+```
+
+### 2.4 Start Services
+
+```bash
+# Pull the latest image
+docker pull ghcr.io/chriskoch/cal-sync:latest
+
+# Start everything
+docker compose up -d
+
+# Check logs
+docker compose logs -f app
+```
+
+**Access**: Open http://localhost:8033
+
+---
+
+## Step 3: Configure Reverse Proxy (Production)
+
+For production deployment with a custom domain:
+
+### 3.1 Update .env.local
+
+```bash
+# Add to .env.local
+API_URL=https://yourdomain.com
+FRONTEND_URL=https://yourdomain.com
+```
+
+### 3.2 Update OAuth Redirect URI
+
+In Google Cloud Console, ensure your redirect URI is:
+```
+https://yourdomain.com/api/oauth/callback
+```
+
+### 3.3 Configure Reverse Proxy
+
+**Example: nginx proxy manager**
+- Domain: `yourdomain.com`
+- Forward to: `localhost:8033`
+- SSL: Enable (Let's Encrypt)
+- WebSockets: Enable
+
+**Example: Caddy**
+```caddy
+yourdomain.com {
+    reverse_proxy localhost:8033
+}
+```
+
+**Example: nginx**
+```nginx
+server {
+    listen 443 ssl http2;
+    server_name yourdomain.com;
+
+    ssl_certificate /path/to/cert.pem;
+    ssl_certificate_key /path/to/key.pem;
+
+    location / {
+        proxy_pass http://localhost:8033;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+### 3.4 Restart Services
+
+```bash
+docker compose down
+docker compose up -d
+```
+
+---
+
+## Step 4: First Use
+
+1. **Open Cal-Sync** in your browser
+   - Local: http://localhost:8033
+   - Production: https://yourdomain.com
+
+2. **Click "Sign in with Google"**
+   - Use a Google account you added as a test user
+   - Authorize the app
+   - This becomes your **source calendar**
+
+3. **Connect Destination Account**
+   - Click "Connect Destination Google Account"
+   - Sign in with your second Google account
+   - Authorize
+
+4. **Create Sync Configuration**
+   - Select source calendar
+   - Select destination calendar
+   - Choose sync direction:
+     - **One-way**: Source → Destination only
+     - **Bi-directional**: Both ways
+   - Set event color preference
+   - **Optional**: Enable auto-sync (cron schedule)
+
+5. **Test Sync**
+   - Click "Sync Now"
+   - View results and history
+
+---
+
+## Troubleshooting
+
+### Error 403: access_denied
+
+**Cause**: Your Google account is not in the test users list.
+
+**Fix**:
+1. Go to [OAuth consent screen](https://console.cloud.google.com/apis/credentials/consent)
+2. Click **"Edit App"**
+3. Scroll to **"Test users"**
+4. Click **"+ Add Users"**
+5. Add the email you're trying to use
+6. **Save** and try again
+
+### Error 400: redirect_uri_mismatch
+
+**Cause**: Redirect URI doesn't match Google Console settings.
+
+**Fix**:
+1. Check your redirect URI format:
+   - Local: `http://localhost:8033/api/oauth/callback`
+   - Production: `https://yourdomain.com/api/oauth/callback`
+2. No trailing slash!
+3. Update in [Google Cloud Console](https://console.cloud.google.com/apis/credentials)
+
+### Container won't start
+
+**Check logs**:
+```bash
+docker compose logs app
+docker compose logs db
+```
+
+**Common fixes**:
+```bash
+# Restart services
+docker compose down
+docker compose up -d
+
+# Reset everything (deletes data!)
+docker compose down -v
+docker compose up -d
+```
+
+### Events not syncing
+
+**Checks**:
+1. Verify both OAuth accounts connected (check Dashboard)
+2. Check sync logs (Dashboard → View History)
+3. Verify Google Calendar API is enabled in GCP
+4. Check API logs: `docker compose logs app | grep ERROR`
+
+---
+
+## Updating Cal-Sync
+
+```bash
+# Pull latest image
+docker pull ghcr.io/chriskoch/cal-sync:latest
+
+# Restart
+docker compose down
+docker compose up -d
+```
+
+Database migrations run automatically on startup.
+
+---
+
+## Backup & Restore
+
+### Backup
+
+```bash
+# Backup database
+docker exec cal-sync-app sh -c "pg_dump -U postgres -d calsync" > backup.sql
+```
+
+### Restore
+
+```bash
+# Restore database
+docker exec -i cal-sync-app sh -c "psql -U postgres -d calsync" < backup.sql
+```
+
+---
+
+## Security Checklist
+
+Before production deployment:
+
+- [ ] Strong passwords generated (24+ characters)
+- [ ] `ENVIRONMENT=production` and `DEBUG=false` set
+- [ ] Using HTTPS (not HTTP)
+- [ ] OAuth redirect URI uses HTTPS
+- [ ] `.env.local` is NOT committed to git
+- [ ] Firewall configured (only ports 80, 443 public)
+- [ ] Regular backups scheduled
+- [ ] Test users added in Google OAuth
+
+---
+
+## Advanced Configuration
+
+### Change Port
+
+Edit `.env.local`:
+```bash
+EXTERNAL_PORT=8080
+API_URL=http://localhost:8080
+FRONTEND_URL=http://localhost:8080
+```
+
+Update OAuth redirect URI to match.
+
+### Database Connection
+
+For external PostgreSQL:
+```bash
+DATABASE_URL=postgresql://user:pass@host:5432/dbname
+```
+
+### Sync Settings
+
+```bash
+# Days to sync ahead (default: 90)
+SYNC_LOOKAHEAD_DAYS=120
+```
+
+---
+
+## Need Help?
+
+- **Documentation**: [README.md](README.md) for features
+- **Development**: [DEVELOPMENT.md](DEVELOPMENT.md) for local dev
+- **Technical Details**: [CLAUDE.md](CLAUDE.md) for architecture
+- **Issues**: [GitHub Issues](https://github.com/chriskoch/cal-sync/issues)
+
+---
+
+**That's it!** Cal-Sync is ready. Happy syncing! 🎉
