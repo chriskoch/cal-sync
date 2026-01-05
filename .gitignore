@@ -22,7 +22,6 @@ htmlcov/
 # Frontend build artifacts
 dist/
 .vite/
-vite-env.d.ts
 RELEASE_*.md
 frontend/.env
 
