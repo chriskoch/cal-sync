@@ -24,7 +24,7 @@ import {
   ToggleButtonGroup,
   ToggleButton,
 } from '@mui/material';
-import { PlayArrow, Circle, Lock, Close, Add, ArrowForward, SyncAlt } from '@mui/icons-material';
+import { PlayArrow, Circle, Lock, Close, Add, ArrowForward, SyncAlt, Check } from '@mui/icons-material';
 import CalendarSelector from './CalendarSelector';
 import { syncAPI, SyncConfig } from '../services/api';
 import { CALENDAR_COLORS } from '../constants/colors';
@@ -345,82 +345,218 @@ export default function SyncConfigForm({ onConfigCreated }: SyncConfigFormProps)
               </Grid>
 
               {/* Sync Settings */}
-              <Grid item xs={12} md={6}>
-                <FormControl fullWidth>
-                  <InputLabel>
+              <Grid item xs={12} md={enableBidirectional ? 6 : 12}>
+                <Box>
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      fontSize: '13px',
+                      fontWeight: 500,
+                      color: '#202124',
+                      mb: 1.5,
+                    }}
+                  >
                     {enableBidirectional
                       ? `Event color (${sourceCalendarName || 'Account 1'} → ${destCalendarName || 'Account 2'})`
                       : 'Event color'}
-                  </InputLabel>
-                  <Select
-                    value={destinationColorId}
-                    onChange={(e) => setDestinationColorId(e.target.value)}
-                    label={
-                      enableBidirectional
-                        ? `Event color (${sourceCalendarName || 'Account 1'} → ${destCalendarName || 'Account 2'})`
-                        : 'Event color'
-                    }
+                  </Typography>
+                  <Box
                     sx={{
-                      '& .MuiOutlinedInput-notchedOutline': {
-                        borderColor: '#dadce0',
-                      },
-                      '&:hover .MuiOutlinedInput-notchedOutline': {
-                        borderColor: '#1967d2',
-                      },
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fill, minmax(32px, 1fr))',
+                      gap: 1,
+                      p: 2,
+                      border: '1px solid #dadce0',
+                      borderRadius: 2,
+                      bgcolor: '#f8f9fa',
                     }}
                   >
-                    <MenuItem value="">
-                      <em>Same as source</em>
-                    </MenuItem>
+                    {/* "Same as source" option */}
+                    <Box
+                      onClick={() => setDestinationColorId('')}
+                      sx={{
+                        width: 32,
+                        height: 32,
+                        borderRadius: 1,
+                        border: '1px solid #dadce0',
+                        bgcolor: 'white',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        position: 'relative',
+                        transition: 'all 0.2s',
+                        '&:hover': {
+                          transform: 'scale(1.15)',
+                          boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+                        },
+                      }}
+                      title="Same as source"
+                    >
+                      {destinationColorId === '' ? (
+                        <Check sx={{ fontSize: 18, color: '#1a73e8', fontWeight: 'bold' }} />
+                      ) : (
+                        <Box sx={{ fontSize: '16px', color: '#5f6368', lineHeight: 1 }}>≈</Box>
+                      )}
+                    </Box>
                     {CALENDAR_COLORS.map((colorOption) => (
-                      <MenuItem key={colorOption.id} value={colorOption.id}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                          <Circle sx={{ color: colorOption.color, fontSize: 16 }} />
-                          <Typography sx={{ fontSize: '14px', color: '#202124' }}>
-                            {colorOption.name}
-                          </Typography>
-                        </Box>
-                      </MenuItem>
+                      <Box
+                        key={colorOption.id}
+                        onClick={() => setDestinationColorId(colorOption.id)}
+                        sx={{
+                          width: 32,
+                          height: 32,
+                          borderRadius: 1,
+                          border: '1px solid #dadce0',
+                          bgcolor: colorOption.color,
+                          cursor: 'pointer',
+                          position: 'relative',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          transition: 'all 0.2s',
+                          '&:hover': {
+                            transform: 'scale(1.15)',
+                            boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+                          },
+                        }}
+                        title={colorOption.name}
+                      >
+                        {destinationColorId === colorOption.id && (
+                          <Check
+                            sx={{
+                              fontSize: 20,
+                              color: 'white',
+                              filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.4))',
+                              fontWeight: 'bold',
+                            }}
+                          />
+                        )}
+                      </Box>
                     ))}
-                  </Select>
-                </FormControl>
+                  </Box>
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      display: 'block',
+                      mt: 1,
+                      ml: 0.5,
+                      fontSize: '12px',
+                      color: '#5f6368',
+                    }}
+                  >
+                    {destinationColorId === ''
+                      ? 'Same as source calendar'
+                      : CALENDAR_COLORS.find(c => c.id === destinationColorId)?.name || 'Select a color'}
+                  </Typography>
+                </Box>
               </Grid>
 
               {/* Reverse direction color picker (only for bi-directional) */}
               {enableBidirectional && (
                 <Grid item xs={12} md={6}>
-                  <FormControl fullWidth>
-                    <InputLabel>
-                      Event color ({destCalendarName || 'Account 2'} → {sourceCalendarName || 'Account 1'})
-                    </InputLabel>
-                    <Select
-                      value={reverseDestinationColorId}
-                      onChange={(e) => setReverseDestinationColorId(e.target.value)}
-                      label={`Event color (${destCalendarName || 'Account 2'} → ${sourceCalendarName || 'Account 1'})`}
+                  <Box>
+                    <Typography
+                      variant="body2"
                       sx={{
-                        '& .MuiOutlinedInput-notchedOutline': {
-                          borderColor: '#dadce0',
-                        },
-                        '&:hover .MuiOutlinedInput-notchedOutline': {
-                          borderColor: '#1967d2',
-                        },
+                        fontSize: '13px',
+                        fontWeight: 500,
+                        color: '#202124',
+                        mb: 1.5,
                       }}
                     >
-                      <MenuItem value="">
-                        <em>Same as source</em>
-                      </MenuItem>
+                      Event color ({destCalendarName || 'Account 2'} → {sourceCalendarName || 'Account 1'})
+                    </Typography>
+                    <Box
+                      sx={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fill, minmax(32px, 1fr))',
+                        gap: 1,
+                        p: 2,
+                        border: '1px solid #dadce0',
+                        borderRadius: 2,
+                        bgcolor: '#f8f9fa',
+                      }}
+                    >
+                      {/* "Same as source" option */}
+                      <Box
+                        onClick={() => setReverseDestinationColorId('')}
+                        sx={{
+                          width: 32,
+                          height: 32,
+                          borderRadius: 1,
+                          border: '1px solid #dadce0',
+                          bgcolor: 'white',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          position: 'relative',
+                          transition: 'all 0.2s',
+                          '&:hover': {
+                            transform: 'scale(1.15)',
+                            boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+                          },
+                        }}
+                        title="Same as source"
+                      >
+                        {reverseDestinationColorId === '' ? (
+                          <Check sx={{ fontSize: 18, color: '#1a73e8', fontWeight: 'bold' }} />
+                        ) : (
+                          <Box sx={{ fontSize: '16px', color: '#5f6368', lineHeight: 1 }}>≈</Box>
+                        )}
+                      </Box>
                       {CALENDAR_COLORS.map((colorOption) => (
-                        <MenuItem key={colorOption.id} value={colorOption.id}>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                            <Circle sx={{ color: colorOption.color, fontSize: 16 }} />
-                            <Typography sx={{ fontSize: '14px', color: '#202124' }}>
-                              {colorOption.name}
-                            </Typography>
-                          </Box>
-                        </MenuItem>
+                        <Box
+                          key={colorOption.id}
+                          onClick={() => setReverseDestinationColorId(colorOption.id)}
+                          sx={{
+                            width: 32,
+                            height: 32,
+                            borderRadius: 1,
+                            border: '1px solid #dadce0',
+                            bgcolor: colorOption.color,
+                            cursor: 'pointer',
+                            position: 'relative',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            transition: 'all 0.2s',
+                            '&:hover': {
+                              transform: 'scale(1.15)',
+                              boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+                            },
+                          }}
+                          title={colorOption.name}
+                        >
+                          {reverseDestinationColorId === colorOption.id && (
+                            <Check
+                              sx={{
+                                fontSize: 20,
+                                color: 'white',
+                                filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.4))',
+                                fontWeight: 'bold',
+                              }}
+                            />
+                          )}
+                        </Box>
                       ))}
-                    </Select>
-                  </FormControl>
+                    </Box>
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        display: 'block',
+                        mt: 1,
+                        ml: 0.5,
+                        fontSize: '12px',
+                        color: '#5f6368',
+                      }}
+                    >
+                      {reverseDestinationColorId === ''
+                        ? 'Same as source calendar'
+                        : CALENDAR_COLORS.find(c => c.id === reverseDestinationColorId)?.name || 'Select a color'}
+                    </Typography>
+                  </Box>
                 </Grid>
               )}
 
