@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.2] - 2026-01-05
+
+### Fixed
+- **CI/CD Pipeline**
+  - Added missing OAuth environment variables (OAUTH_CLIENT_ID, OAUTH_CLIENT_SECRET) to GitHub Actions backend tests
+  - Added pytest-cov to requirements.txt for coverage reporting
+  - Fixed invalid Fernet encryption key format in CI configuration
+  - Committed package-lock.json for reproducible npm builds and CI caching
+  - Committed vite-env.d.ts for TypeScript build support (fixes import.meta.env type errors)
+
+### Changed
+- **Repository Maintenance**
+  - Removed package-lock.json and vite-env.d.ts from .gitignore for better reproducibility
+  - All CI tests now passing (backend: 101 tests, frontend: 27 tests)
+
 ## [0.8.1] - 2026-01-05
 
 ### Changed
