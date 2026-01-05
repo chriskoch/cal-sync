@@ -43,7 +43,9 @@ jobs:
       env:
         DATABASE_URL: postgresql://postgres:postgres@localhost:5432/calsync_test
         JWT_SECRET: test-secret-key-for-ci
-        ENCRYPTION_KEY: test-encryption-key-32-bytes-base64==
+        ENCRYPTION_KEY: gcwdVL1Y209CmrrVNzTQKqFVDTl86TA5jRp93MC2v_8=
+        OAUTH_CLIENT_ID: test-client-id.apps.googleusercontent.com
+        OAUTH_CLIENT_SECRET: test-client-secret-for-ci
       run: pytest -v --cov=app --cov-report=term-missing
 
     - name: Upload coverage reports

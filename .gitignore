@@ -13,7 +13,6 @@ __pycache__/
 .DS_Store
 .claude/
 node_modules/
-package-lock.json
 
 # Python test coverage
 .coverage
@@ -23,7 +22,6 @@ htmlcov/
 # Frontend build artifacts
 dist/
 .vite/
-vite-env.d.ts
 RELEASE_*.md
 frontend/.env
 
