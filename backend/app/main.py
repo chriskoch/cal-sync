@@ -24,25 +24,39 @@ async def lifespan(app: FastAPI):
     Starts scheduler on startup, shuts down on termination.
     """
     # Startup: Initialize and start scheduler
+    print("=" * 80)
+    print("LIFESPAN STARTUP: Beginning scheduler initialization")
+    print("=" * 80)
     logger.info("Starting application lifespan...")
     scheduler = get_scheduler()
+    print(f"LIFESPAN: Got scheduler instance: {scheduler}")
     scheduler.start()
+    print("LIFESPAN: Scheduler started")
 
     # Load all auto-sync jobs from database
     db = SessionLocal()
     try:
+        print("LIFESPAN: Loading jobs from database")
         scheduler.load_all_jobs_from_db(db)
+        print("LIFESPAN: Jobs loaded successfully")
     finally:
         db.close()
 
     logger.info("Application startup complete")
+    print("=" * 80)
+    print("LIFESPAN STARTUP: Complete")
+    print("=" * 80)
 
     yield
 
     # Shutdown: Stop scheduler gracefully
+    print("=" * 80)
+    print("LIFESPAN SHUTDOWN: Beginning")
+    print("=" * 80)
     logger.info("Shutting down application...")
     scheduler.shutdown(wait=True)
     logger.info("Application shutdown complete")
+    print("LIFESPAN SHUTDOWN: Complete")
 
 
 # Create FastAPI app
