@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.1] - 2026-01-05
+
+### Changed
+- **Documentation**
+  - Completely rewritten INSTALL.md as universal deployment guide
+  - Removed Dockge-specific installation files for cleaner repository
+  - Added prominent OAuth test user warnings to prevent 403 errors
+  - Included universal reverse proxy examples (nginx, Caddy, nginx proxy manager)
+  - Added platform: linux/amd64 to docker-compose examples for AMD64 server compatibility
+  - Comprehensive troubleshooting section covering all common deployment issues
+  - Security checklist for production deployments
+
+### Removed
+- Dockge-specific installation files (docker-compose.dockge.yml, .env.dockge, INSTALL-DOCKGE.md)
+
+### Improved
+- **Installation Experience**
+  - Quick Start guide reduced to 15 minutes (4 clear steps)
+  - Copy-paste ready commands for faster setup
+  - Works with any reverse proxy or Docker deployment method
+  - Multi-platform Docker image support (linux/amd64, linux/arm64)
+  - Production-tested documentation based on real deployment experience
+
 ## [0.8.0] - 2026-01-04
 
 ### Added
