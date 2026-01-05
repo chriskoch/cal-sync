@@ -35,4 +35,5 @@ COPY --from=frontend-builder /frontend/dist ./static
 EXPOSE 8000
 
 # Run migrations and start server
-CMD alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000
+# Use exec form (JSON array) to ensure proper signal handling and lifespan event execution
+CMD ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"]
