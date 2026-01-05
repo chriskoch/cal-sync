@@ -49,7 +49,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Calendar Sync API",
     description="Multi-tenant SaaS for syncing Google Calendar events",
-    version="0.8.1",
+    version="0.8.3",
     debug=settings.debug,
     lifespan=lifespan,
 )
@@ -85,7 +85,7 @@ async def read_root():
     if os.path.exists(index_path):
         return FileResponse(index_path)
     # Fallback to API info if static files don't exist (development mode)
-    return {"message": "Calendar Sync API", "version": "0.8.1"}
+    return {"message": "Calendar Sync API", "version": "0.8.3"}
 
 
 @app.get("/health")
