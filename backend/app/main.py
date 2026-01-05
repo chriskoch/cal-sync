@@ -3,13 +3,47 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from app.config import settings
-from app.database import engine, Base
+from app.database import engine, Base, SessionLocal
 from app.api import auth, oauth, calendars, sync
 from app.middleware import SecurityHeadersMiddleware
+from app.core.scheduler import get_scheduler
+from contextlib import asynccontextmanager
 import os
+import logging
+
+logger = logging.getLogger(__name__)
 
 # Create database tables
 Base.metadata.create_all(bind=engine)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """
+    Lifespan context manager for FastAPI.
+    Starts scheduler on startup, shuts down on termination.
+    """
+    # Startup: Initialize and start scheduler
+    logger.info("Starting application lifespan...")
+    scheduler = get_scheduler()
+    scheduler.start()
+
+    # Load all auto-sync jobs from database
+    db = SessionLocal()
+    try:
+        scheduler.load_all_jobs_from_db(db)
+    finally:
+        db.close()
+
+    logger.info("Application startup complete")
+
+    yield
+
+    # Shutdown: Stop scheduler gracefully
+    logger.info("Shutting down application...")
+    scheduler.shutdown(wait=True)
+    logger.info("Application shutdown complete")
+
 
 # Create FastAPI app
 app = FastAPI(
@@ -17,6 +51,7 @@ app = FastAPI(
     description="Multi-tenant SaaS for syncing Google Calendar events",
     version="0.8.1",
     debug=settings.debug,
+    lifespan=lifespan,
 )
 
 # Configure CORS
